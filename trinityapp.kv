@@ -1,0 +1,65 @@
+#:kivy 1.9.1
+
+<HomeScreen>:
+    id: home_screen
+    Button:
+        id: activate_button
+        size: self.parent.width, self.parent.height
+        background_color: [1, 1, 1, 1]
+        background_normal: ''
+        background_down: ''
+        on_press: root.sm.handle_click(self)
+        Label:
+            text: 'touch screen to begin'
+            top: self.parent.height * 0.4
+            center_x: self.parent.center_x
+            font_size: '25px'
+            color: [.6,.6,.6,1]
+        Label:
+            id: command_echo
+            text: ''
+            top: self.parent.height * 0.34
+            center_x: self.parent.center_x
+            font_size: '30px'
+            color: [.6,.6,.2,1]
+        Button:
+            id: util_button
+            size: '70px', '70px'
+            y: self.height / 2
+            x: self.parent.width - (self.width * 1.5)
+            background_color: [1, 1, 1, 1]
+            background_normal: ''
+            background_down: 'images/scissor_icon.png'
+            on_press: root.sm.go_util_screen()
+            Image:
+                source: 'images/scissor_icon_xpar15.png'
+                width: '50px'
+                height: '50px'
+                x: self.parent.x + 10
+                y: self.parent.y + 10
+
+
+<AppLayout>:
+    id: app_layout
+    canvas:
+        Color:
+            rgba: 1, 1, 1, 1
+        Rectangle:
+            size: self.size
+            pos: self.pos
+    Label:
+        id: 'main-label'
+        text: 'Hello'
+        top: self.parent.height * 0.4
+        center_x: self.parent.center_x
+        font_size: '35px'
+        color: [.6,.6,.6,1]
+    Button:
+        id: activate_button
+        size: 50, 50
+        y: 200
+        x: 200
+        text: 'Start'
+        background_color: [.3, .3, 1, 1]
+        background_normal: ''
+        background_down: ''
