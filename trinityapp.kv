@@ -8,7 +8,7 @@
         background_color: [1, 1, 1, 1]
         background_normal: ''
         background_down: ''
-        on_press: root.sm.handle_click(self)
+        on_press: root.app.cleanup()
         Label:
             text: 'touch screen to begin'
             top: self.parent.height * 0.4
@@ -30,14 +30,13 @@
             background_color: [1, 1, 1, 1]
             background_normal: ''
             background_down: 'images/scissor_icon.png'
-            on_press: root.sm.go_util_screen()
+            on_press: root.test2()
             Image:
                 source: 'images/scissor_icon_xpar15.png'
                 width: '50px'
                 height: '50px'
                 x: self.parent.x + 10
                 y: self.parent.y + 10
-
 
 <AppLayout>:
     id: app_layout
@@ -47,19 +46,23 @@
         Rectangle:
             size: self.size
             pos: self.pos
-    Label:
-        id: 'main-label'
-        text: 'Hello'
-        top: self.parent.height * 0.4
-        center_x: self.parent.center_x
-        font_size: '35px'
-        color: [.6,.6,.6,1]
-    Button:
-        id: activate_button
-        size: 50, 50
-        y: 200
-        x: 200
-        text: 'Start'
-        background_color: [.3, .3, 1, 1]
-        background_normal: ''
-        background_down: ''
+    FloatLayout:
+        Label:
+            id: 'main-label'
+            text: 'Hello'
+            top: self.parent.height * 0.4
+            center_x: self.parent.center_x
+            font_size: '35px'
+            color: [.6,.6,.6,1]
+        Button:
+            id: activate_button
+            size_hint: None, None
+            size: '50px', '50px'
+            y: 200
+            x: 200
+            text: 'Start'
+            background_color: [.6, .3, 1, 1]
+            background_normal: ''
+            background_down: ''
+            on_press: root.sm.go_util_screen()
+
