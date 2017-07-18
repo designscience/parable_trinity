@@ -8,17 +8,20 @@ other sources for use with the Parable program.
 version 1.01 - added support for channel map passed to import functions
 (this had been an unimplemented stub to-date)
 
+Ver. 3.0 - 7/17/2017
+
 ************************************************************ """
 
 from __future__ import division
-import os, sys
+# import os, sys
 import time
 from PIL import Image
 import parclasses
 
 
-#*********************** GraphicImport ****************************
-    
+# *********************** GraphicImport ****************************
+
+
 class GraphicImport(object):
     """ Imports a sequence from a graphic file """
     def __init__(self):
@@ -41,55 +44,57 @@ class GraphicImport(object):
         beat = False  # start with beat off
         beat_time = parclasses.TimeCode(0)
         beat_periods = []  # periods for averaging
-        first_pos = int(spacing / 2)
+        # first_pos = int(spacing / 2)
 
         # open source image file  @@@ some error checking here @@@
         im = Image.open(filename)
         if im.format != "JPEG":
-            print "Please use a JPG image file"
+            print("Please use a JPG image file")
         else:
-            print "Opening image for sequence import..."
-            print "Width: " + str(im.size[0]) + "  Height: " + str(im.size[1])
-            if channelmap != None:
-                print "Using channel map"
+            print("Opening image for sequence import...")
+            print("Width: " + str(im.size[0]) + "  Height: " + str(im.size[1]))
+            if channelmap is not None:
+                print("Using channel map")
 
             name = filename.rpartition('\\')[2]
             name = name.rpartition('.')[0]
             result.name = name
 
             state = [0] * numchannels  # current state of the channels
+            newval = 0  # added to avoid usage before definition warnings below
 
-            # read grapic into a buffer
+            # read graphic into a buffer
             buf = im.load()
 
             # display column, xposition and channel map (test)
             for colx in range(numchannels):
-                if channelmap == None:
+                if channelmap is None:
                     ch = colx + 1
                 else:
                     ch = channelmap.lookup(colx + 1)
-                print "colx:" + str(colx) + "  posx:" + str((colx + 1) * spacing) + "  ch:" + str(ch)
+                print("colx:" + str(colx) + "  posx:" + str((colx + 1) * spacing) + "  ch:" + str(ch))
 
             # read in graphic lines
             start = parclasses.TimeCode(time.time())  # calc processing time
             for line in range(im.size[1]):
                 for colx in range(numchannels):
-                        if channelmap == None:
+                        if channelmap is None:
                             ch = colx
                         else:
-                            ch = channelmap.lookup(colx + 1) - 1  #lookup then make 0-based
+                            ch = channelmap.lookup(colx + 1) - 1  # lookup then make 0-based
                             if ch < 0 or ch >= numchannels:
                                 break
                         
-                        val = buf[(colx + 1) * spacing, line] # first method
-                        #val = buf[(ch * spacing) + first_pos, line]  # updated method
+                        val = buf[(colx + 1) * spacing, line]  # first method
+                        # val = buf[(ch * spacing) + first_pos, line]  # updated method
                         newval = int(val[0])
-                        #print str(newval) + " ",  # warning slow!
-                        #print str((ch + 1) * spacing) + " ",  # warning slow!
-                        #print str(line) + " " + str(ch) + " | ", # warning slow!
+                        # print(str(newval) + " ")  # warning slow!
+                        # print(str((ch + 1) * spacing) + " ",)  # warning slow!
+                        # print(str(line) + " " + str(ch) + " | ",) # warning slow!
 
                         # if the state has changed, create an event object
                         newstate = state[ch]
+                        newaction = "off" if newstate == 0 else "on"
                         if newval > 153 and state[ch] == 0:
                             newstate = 1
                             newaction = "on"
@@ -97,8 +102,8 @@ class GraphicImport(object):
                             newstate = 0
                             newaction = "off"
 
-                        if (state[ch] != newstate):                  
-                            ev.setValues(line,0,ch+1,newaction,0,newval)
+                        if state[ch] != newstate:
+                            ev.setValues(line, 0, ch+1, newaction, 0, newval)
                             result.addEvent(ev)
                             state[ch] = newstate
 
@@ -108,45 +113,43 @@ class GraphicImport(object):
                     newbeat = int(val[0]) > 153
                     if beat != newbeat:
                         beat = newbeat
-                        if newbeat == True:
-                            if first_beat == False:
+                        if newbeat is True:
+                            if first_beat is False:
                                 first_beat = True
                                 beat_time = parclasses.TimeCode(line)
                                 result.first_beat = beat_time
-                                result.ref_first_beat = parclasses.TimeCode(beat_time) # @@@ added contructor instead of reusing beat_time
+                                result.ref_first_beat = parclasses.TimeCode(beat_time)
                             else:
                                 # Maintain running average
                                 beat_periods.append(parclasses.TimeCode(line) - beat_time)
                                 beat_time = parclasses.TimeCode(line)
 
-
-            
             # calculate beat period
-            if first_beat == True:
-                print "Calculating beat..."
+            if first_beat is True:
+                print("Calculating beat...")
                 avg_beat = 0
                 for tc in beat_periods:
                     avg_beat += tc.total_frames
 
                 if len(beat_periods) > 0:
                     avg_beat = avg_beat / len(beat_periods)
-                beat_period = parclasses.TimeCode(long(avg_beat))
+                beat_period = parclasses.TimeCode(int(avg_beat))
                 
                 # set current and reference beat periods
                 result.beat_period = beat_period
-                result.ref_beat_period = parclasses.TimeCode(beat_period) # @@@ added constructor instead of reusing beat period
+                result.ref_beat_period = parclasses.TimeCode(beat_period)
                 
-                print "First Beat: "  + str(result.first_beat) + "  Beat Period: " + str(result.beat_period)
+                print("First Beat: " + str(result.first_beat) + "  Beat Period: " + str(result.beat_period))
             else:
-                print "No beat track found"
+                print("No beat track found")
 
             # force an off condition at the end of the sequence
-            #for i in range(numchannels):
+            # for i in range(numchannels):
             #    ev.setValues(im.size[1],0,i+1,"off",0,newval)
             #    result.addEvent(ev)
 
             # force a channel 0 event to mark the end of the sequence,
-            ev.setValues(im.size[1] - 1,0,0,"off",0,newval)
+            ev.setValues(im.size[1] - 1, 0, 0, "off", 0, newval)
             result.addEvent(ev)
             
             result.reconcile()
@@ -163,16 +166,15 @@ class GraphicImport(object):
                 corrected_beat_period = seq_period / num_beats
                 result.beat_period.setTime(corrected_beat_period)
                 result.ref_beat_period.setTime(corrected_beat_period)
-                print "** Seq period " + str(seq_period)
-                print "** Num Beats  " + str(num_beats)
-                print "** Corrected beat period" + str(corrected_beat_period)
+                print("** Seq period " + str(seq_period))
+                print("** Num Beats  " + str(num_beats))
+                print("** Corrected beat period" + str(corrected_beat_period))
             
-            end =  parclasses.TimeCode(time.time())
-            print "Processing time: " + str(end - start)
+            end = parclasses.TimeCode(time.time())
+            print("Processing time: " + str(end - start))
 
         return result
 
-    
     def import_triple(self, filename, numchannels, spacing, beattrackpos=0, channelmap=None, filtrobj=None):
         """ Opens a graphic file (jpg, gif) and imports a sequence.
             Returns a ControlList object
@@ -189,10 +191,10 @@ class GraphicImport(object):
         # open source image file  @@@ some error checking here @@@
         im = Image.open(filename)
         if im.format != "JPEG":
-            print "Please use a JPG image file"
+            print("Please use a JPG image file")
         else:
-            print "Opening image for sequence import..."
-            print "Width: " + str(im.size[0]) + "  Height: " + str(im.size[1])
+            print("Opening image for sequence import...")
+            print("Width: " + str(im.size[0]) + "  Height: " + str(im.size[1]))
 
             state = [0] * numchannels  # current state of the channels
             numchannels = int(numchannels / 3)
@@ -213,6 +215,7 @@ class GraphicImport(object):
                         
                         # if the state has changed, create an event object
                         newstate = state[ch]
+                        newaction = "off" if newstate == 0 else "on"
                         if newval > 153 and state[ch] == 0:
                             newstate = 1
                             newaction = "on"
@@ -220,17 +223,13 @@ class GraphicImport(object):
                             newstate = 0
                             newaction = "off"
 
-                        if (state[ch] != newstate):                  
-                            ev.setValues(line,0,ch+1,newaction,0,newval)
+                        if state[ch] != newstate:
+                            ev.setValues(line, 0, ch+1, newaction, 0, newval)
                             result.addEvent(ev)
                             state[ch] = newstate
                             
             result.reconcile()
-            end =  parclasses.TimeCode(time.time())
-            print "Processing time: " + str(end - start)
+            end = parclasses.TimeCode(time.time())
+            print("Processing time: " + str(end - start))
 
         return result
-
-    
-        
-                        

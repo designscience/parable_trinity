@@ -1,12 +1,12 @@
 import os
 import kivy
-import logging
+# import logging
 import sys
 import vlc
-import time
-import threading
+# import time
+# import threading
 
-import paraplayer
+# import paraplayer
 import parascreens
 
 from kivy.app import App

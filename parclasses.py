@@ -21,21 +21,20 @@ accuracy.  E.G. time basis is not float seconds with frames a by-product
 instead of basis being frames with float seconds a by-product.  7/26/2012
 
 
-Version 2.1
+Version 3.0 - Python 3 & Trinity 7/2017
 
 ***************************************************** """
 
 from __future__ import division
 import parallel
-import winsound
 import operator
 import time
-import random
+# import random
 # import os
 # import sys
-import threading
+# import threading
+# from multiprocessing import Queue
 import xml.etree.ElementTree as ET  # XML support
-from multiprocessing import Queue
 
 max_channels = 24  
 
@@ -92,7 +91,8 @@ class ChannelMap(object):
                 result = i + 1
                 break
         return result
-    
+
+
 # ***************** TimeCode **************************
 
 
@@ -128,25 +128,25 @@ class TimeCode(object):
             return False  # not a matching type
 
     def __str__(self):
-        return(self.SMPTE())
+        return self.SMPTE()
 
     def __repr__(self):
-        return(str(self.total_frames))
+        return str(self.total_frames)
 
     def __add__(self, other):
         result = self.__class__(other)
         result.addTime(self.seconds)
-        return(result)
+        return result
 
     def __radd__(self, other):
         result = self.__class__(other)
         result.addTime(self.seconds)
-        return(result)
+        return result
 
     def __sub__(self, other):
         result = self.__class__(self.seconds)
         result.addTime(-other.seconds)
-        return(result)
+        return result
 
     def __mul__(self, other):
         result = self.__class__(self)
@@ -155,7 +155,7 @@ class TimeCode(object):
         else:
             # note - mulitplies by factor, not another time
             result.setTime(self.seconds * float(other))
-        return(result)
+        return result
         
     def setTime(self, timecode):
         """Reads a SMPTE timecode string and sets the total_frames value"""
@@ -215,7 +215,7 @@ class TimeCode(object):
             if index < 4:
                 result += ":"
             remainder = value[1]
-        return(result)
+        return result
 
     def addTime(self, time_to_add):
         """Adds time (int or SMPTE string) to this timecode object"""
@@ -304,13 +304,13 @@ class ControlEvent(object):
 
     def __cmp__(self, other):
         """ Compare time codes of events """
-        if (isinstance(other, TimeCode)):
-            return(self.time.__cmp__(other))
+        if isinstance(other, TimeCode):
+            return self.time.__cmp__(other)
         elif isinstance(other, int) or isinstance(other, int):
             result = self.time.total_frames - other.time.total_frames
-            if (result > 0):
+            if result > 0:
                 result = 1
-            elif (result < 0):
+            elif result < 0:
                 result = -1
             return result
         else:  # incompatible data type
@@ -321,7 +321,7 @@ class ControlEvent(object):
         result = "time=%s, level=%d, channel=%d, action=%s, dur=%d, val=%d, seq=%d" % \
                  (self.time, self.level, self.channel, self.action, self.duration.total_frames, self.value,
                   self.sequence)
-        return (result)
+        return result
 
     __repr__ = __str__
 
@@ -333,7 +333,7 @@ class ControlEvent(object):
                  "<action>%s</action>\n%s<duration>%s</duration>\n%s<value>%d</value>\n%s<sequence>%d</sequence>\n%s</event>" % \
                  (ind1, ind2, self.time.SMPTE(), ind2, self.level,  ind2, self.channel, ind2, self.action,
                   ind2, self.duration.SMPTE(), ind2, self.value, ind2, self.sequence, ind1)
-        return(result)
+        return result
 
     def setValues(self, frames=0, level=0, channel=0, action='off', duration=0, value=0, sequence=0):
         self.time = TimeCode(frames)
@@ -434,7 +434,7 @@ class ControlList(object):
         self.sync_period = None  # period last used in scaleToBeat() - to maintain synch
         self.sync_object = None  # reference to external beatnik object
         
-        #initialize list with at least one event (to assert the level)
+        # initialize list with at least one event (to assert the level)
         if isinstance(initializer, ControlList):            
             self.events = []
             for ev in initializer.events:
@@ -448,12 +448,11 @@ class ControlList(object):
             event1.level = level
             self.events = [event1]
 
-
     def __str__(self):
         result = ""
         for ev in self.events:
             result = result + ev.__str__() + "\n"
-        return (result)
+        return result
 
     def __add__(self, other):
         result = ControlList(self)
@@ -486,18 +485,17 @@ class ControlList(object):
                     
         print("leaving thread")
                 
-            
     def addEvent(self, newEvent):
         """Adds one ControlEvent event to the list.  The level and channel of the
         event is translated unless it is already set to a non-zero value"""
-        new1 = ControlEvent(newEvent) # create new event instance
+        new1 = ControlEvent(newEvent)  # create new event instance
 
         # Change channel of the new event unless already set
         if new1.channel == 0 and self.defchannel > 0:
             new1.translateChannel(self.defchannel)
         
         self.events.append(new1)
-        return(new1)
+        return new1
 
     def sortEvents(self):
         """Sorts events in the list in time-order"""
@@ -530,7 +528,6 @@ class ControlList(object):
         for ev in self.events:
             ev.time.addTime(frames)
 
-            
     # original version - see FAILED-1 for new version
     def setBaseTime(self, base_time=0):
         """ Sorts the list by time, sets the first event in this
@@ -542,7 +539,6 @@ class ControlList(object):
         if diff.total_frames != 0:
             self.offsetTime(diff)
 
-    
     def overlay(self, other_list, time_offset=0):
         """Overlays another list on this one. with an optional time offset"""
         # Create a unique instance of other_list
@@ -550,7 +546,7 @@ class ControlList(object):
         
         # Add time offset to other list
         ofs = TimeCode(time_offset)
-        if (ofs.total_frames != 0):
+        if ofs.total_frames != 0:
             other.offsetTime(ofs.total_frames)
         
         if isinstance(other, ControlList):
@@ -563,7 +559,6 @@ class ControlList(object):
         
         # Sort events in time order
         self.sortEvents()
-
 
     def append(self, other_list):
         """sorts this list then appends other_list by setting
@@ -580,20 +575,18 @@ class ControlList(object):
             print('Unable to append other_list; \nIt is not a ControlList instance')
             return TimeCode(0)
         
-
     def getNextEvent(self):
         """ Returns the next event item in the list"""
-        if (self.next_event < len(self.events)):
+        if self.next_event < len(self.events):
             self.next_event += 1
             return self.events[self.next_event - 1]
         else:
             return None
 
-
     def getFirstEvent(self):
         """ Retrieve the first event in this list"""
         self.next_event = 0
-        if (self.next_event < len(self.events)):
+        if self.next_event < len(self.events):
             self.next_event += 1
             return self.events[self.next_event - 1]
         else:
@@ -606,14 +599,14 @@ class ControlList(object):
         self.next_event = 0
         max_index = len(self.events)
 
-        while (self.next_event < max_index and self.events[self.next_event].time.total_frames < target.total_frames):
+        while self.next_event < max_index and self.events[self.next_event].time.total_frames < target.total_frames:
             self.next_event += 1
 
         # Return the result
-        if (self.next_event < max_index):
-            return(self.events[self.next_event])
+        if self.next_event < max_index:
+            return self.events[self.next_event]
         else:
-            return(None)
+            return None
 
     def removeZeros(self):
         """ removes all channel 0 events (generally not
@@ -625,53 +618,53 @@ class ControlList(object):
             else:
                 i += 1
 
-
     def reconcile(self):
         """Sorts list and combines all levels to produce a list of all level 0
         (active control) events.  A ControlList must be reconciled before it can
         be used """
-        levelMap = {} #dictionary to keep track of level in this file
-        valueMap = {} #dictionary to keep track of pixel values (future)
-        currentState = False #Assume an off state initially
+        levelMap = {}  # dictionary to keep track of level in this file
+        valueMap = {}  # dictionary to keep track of pixel values (future)
+        currentState = False  # Assume an off state initially
         
-        #First, create a new result list
+        # First, create a new result list
         result = ControlList(initializer=self)
  
-        #Sort all events (ControlEvents) in time order
+        # Sort all events (ControlEvents) in time order
         result.sortEvents()
 
-        #Map all existing non-zero levels in this list to determine the number of levels
+        # Map all existing non-zero levels in this list to determine the number of levels
         for ev in result.events:
             if ev.level > 0 and ev.level not in levelMap:
-                #Add this level to the map
+                # Add this level to the map
                 levelMap[ev.level] = 0
 
-        #Start at the beginning and scan the list for non-level-0 events
+        # Start at the beginning and scan the list for non-level-0 events
         for ev in result.events:
             if ev.level > 0:
                 # set "value" (future use)
                 valueMap[ev.level] = ev.value
             
-                #Save the state for this level to the levelMap
+                # Save the state for this level to the levelMap
                 if ev.action == "off":
                     levelMap[ev.level] = 0
                 else:
                     levelMap[ev.level] = 1
                 
-                #Check for a change in state
+                # Check for a change in state
                 tempState = self.mapState(levelMap)
                 
                 if currentState != tempState:
-                    #state has changed! Create a new level 0 event
+                    # state has changed! Create a new level 0 event
                     currentState = tempState
                     newEv = ControlEvent()
-                    newEv.setValues(level=0,frames=ev.time.total_frames,value=self.mapValue(valueMap),duration=0,channel=ev.channel)
+                    newEv.setValues(level=0, frames=ev.time.total_frames, value=self.mapValue(valueMap), duration=0,
+                                    channel=ev.channel)
                     if currentState:
-                        newEv.action="on"
+                        newEv.action = "on"
                     else:
-                        newEv.action="off"
+                        newEv.action = "off"
                     
-                    #append the new event to this list (it's OK, it's level 0 and will be ignored)
+                    # append the new event to this list (it's OK, it's level 0 and will be ignored)
                     result.events.append(newEv)
             
         # Now remove all non-level-0 events
@@ -685,7 +678,7 @@ class ControlList(object):
         # Filter for redundant events, minimums, and write duration to ON events
         # Normalize for time 0??  (don't allow negative times)
             
-        return(result)
+        return result
 
     def q_handler(self, queue):
         """ Handles an "interrupt" by the queue during execute(),
@@ -716,10 +709,10 @@ class ControlList(object):
                 
             print('Running (' + str(self.numEvents()) + " events)...")
             
-            while (force_run or isinstance(ev, ControlEvent)):
-                while (isinstance(ev, ControlEvent) and ev.time <= now):
+            while force_run or isinstance(ev, ControlEvent):
+                while isinstance(ev, ControlEvent) and ev.time <= now:
                     self.keepState(ev)  # keep cur_state up-to-date
-                    if (valve_port.setEvent(ev)):
+                    if valve_port.setEvent(ev):
                         run_it = True
                     ev = clr.getNextEvent()
 
@@ -745,7 +738,6 @@ class ControlList(object):
             # No valid ValvePort instance passed
             print('Unable to run this ControlList; invalid ValvePort instance')
 
-
     def numEvents(self):
         """ Returns the number of ControlEvents in this list"""
         return len(self.events)
@@ -756,8 +748,8 @@ class ControlList(object):
 
         # reset start time
         now = TimeCode(time.time())
-        seq_time = (now.seconds - self.start_time.seconds) * scale_factor # in seconds (float)
-        now.addTime(0.0 - seq_time) # subtract seq_time
+        seq_time = (now.seconds - self.start_time.seconds) * scale_factor  # in seconds (float)
+        now.addTime(0.0 - seq_time)  # subtract seq_time
         self.start_time.setTime(now)
 
         # scale the list
@@ -766,11 +758,8 @@ class ControlList(object):
 
         self.beat_period.setTime(self.ref_beat_period.seconds * scale_factor)
         self.first_beat.setTime(self.ref_first_beat.seconds * scale_factor)
-        
 
-
-
-    def scaleToBeat(self, beatperiod, beatObject = None):
+    def scaleToBeat(self, beatperiod, beatObject=None):
         """ calculates a scaling rate based on the target beat period
             then scales the sequence accordingly """
         if isinstance(beatperiod, TimeCode):
@@ -780,13 +769,12 @@ class ControlList(object):
             period = TimeCode(beatperiod)
             self.sync_period = beatperiod  # danger! assumes a float!
 
-        self.sync_object = beatObject # object for perpetual resynching (optional)
+        self.sync_object = beatObject  # object for perpetual resynching (optional)
 
         if self.ref_beat_period.total_frames > 0:
             scale_factor = period.seconds / self.ref_beat_period.seconds
             self.scale(scale_factor)
 
-            
     def scaleOnNext(self, scale_factor):
         """ Save the scale factor and scale on next getNextByXXXX() call.
             Prevents conflicting scaling and sequence execution """
@@ -809,7 +797,6 @@ class ControlList(object):
         self.scale_pending = False
         """
         self.scale_pending = True
-            
 
     def keepState(self, eventObj):
         """ maintains the cur_state array so the sequence can be
@@ -821,28 +808,25 @@ class ControlList(object):
             if self.cur_state[eventObj.channel] < 0:
                 self.cur_state[eventObj.channel] = 0
 
-
     def start(self, starttime=None):
         """ Marks the start time of the sequence.  Call this before
             subsequent calls to getNextByTime() """
         if starttime is None:
             self.start_time.setTime(time.time())  # use system time
         else:
-            self.start_time.setTime(starttime) # use passed time
+            self.start_time.setTime(starttime)  # use passed time
 
         self.next_event = 0
         self.eof = False   # for end of sequence reporting in getNextByXXXX
-
 
     def stop(self):
         """ Stop() moves the next_event pointer past the end of the events list
             cleanup is done in the getNextEventByTime call """
         self.next_event = len(self.events) + 100
         
-
     def getNextByTime(self, timenow=None):
         """ Returns either an event to execute if it's due now or None if no events are due """
-        #scale the sequence
+        # scale the sequence
         if self.scale_pending:
             self.scale(self.scale_factor)
 
@@ -858,30 +842,30 @@ class ControlList(object):
             
             if evnext.time <= now:
                 self.next_event += 1
-                self.keepState(evnext)  #keep the cur_state array up to date
+                self.keepState(evnext)  # keep the cur_state array up to date
 
                 # check for looping
-                if self.looping == True and self.next_event == len(self.events):
-                    #set the start to the end of the last loop 
+                if self.looping is True and self.next_event == len(self.events):
+                    # set the start to the end of the last loop
                     newstart = TimeCode(self.start_time + evnext.time)
 
-                    # perpetual resynching
+                    # perpetual re-syncing
                     if self.sync_object is not None:
-                        if self.sync_object.isSimilarTo(self.sync_period): # did timing on sync object change?
+                        if self.sync_object.isSimilarTo(self.sync_period):  # did timing on sync object change?
                             newstart.setTime(TimeCode(self.sync_object.getCorrectedBeatTime(newstart.getSeconds())))
                         else:
                             print("Dropping sync object - timing changed")
                             self.sync_object = None  # disengage from synch
 
-                    self.start(newstart.seconds) # in any case, load new start time
+                    self.start(newstart.seconds)  # in any case, load new start time
                 return evnext
             else:
-                #print str(now) + ">>" + str(evnext.time) + " - " + str(self.next_event) + ":" + str(len(self.events))
+                # print str(now) + ">>" + str(evnext.time) + " - " + str(self.next_event) + ":" + str(len(self.events))
                 return False
         else:
-            #at end of sequence... is there any cleanup needed?
+            # at end of sequence... is there any cleanup needed?
             if sum(self.cur_state) == 0:            
-                #report end of sequence
+                # report end of sequence
                 try:
                     if not self.eof:
                         self.eof = True
@@ -897,12 +881,11 @@ class ControlList(object):
                 for i in range(max_channels + 1):
                     if self.cur_state[i] > 0:
                         newEv = ControlEvent()
-                        newEv.setValues(level=0,frames=0,value=0,duration=0,channel=i)
+                        newEv.setValues(level=0, frames=0, value=0, duration=0, channel=i)
                         self.keepState(newEv)
                         self.cleanup.append(newEv)
                         break
                 return newEv  # may be "False"
-        
 
     def atEnd(self):
         """ Returns True if at end of sequence AND all cleanup done """
@@ -910,8 +893,7 @@ class ControlList(object):
             return False
         else:
             return True
-            
-            
+
     def running(self):
         """ Returns True if not yet at end of sequence, else False
             Does not consider cleanup events "running" """
@@ -921,7 +903,7 @@ class ControlList(object):
             return False
 
     def stopSynching(self):
-        """ stop synching with beat object. call when usebeat is off """
+        """ stop syncing with beat object. call when usebeat is off """
         self.sync_object = None
 
     def saveXML(self, file_path):
@@ -945,10 +927,9 @@ class ControlList(object):
         for ev in self.events:
             ev.getXMLElement(events)
 
-        #save file
+        # save file
         tree = ET.ElementTree(root)
         tree.write(file_path)
-                 
 
     def loadXML(self, file_path):
         """ reads a control list in from an XML file """
@@ -971,7 +952,6 @@ class ControlList(object):
         self.beat_period.setTime(float(root.get("beat_period")))
         self.first_beat.setTime(float(root.get("first_beat")))
 
-        
         # get events
         del self.events[:]  # clear any exiting events
         self.events = []
@@ -982,10 +962,10 @@ class ControlList(object):
             for ev in ev_list:
                 self.events.append(ControlEvent(ev))
         
-            
 
-#***************** ValvePort *****************************
-    
+# ***************** ValvePort *****************************
+
+
 class ValvePort(object):
     """Abstracts the interface between the ControlEvent class and the
        physical valve.  This may use a parallel port or it may use a
@@ -1015,7 +995,6 @@ class ValvePort(object):
         """ defines a channel map for remapping the output of this port """
         self.channel_map = channel_map
 
-
     def setChannel(self, channel, value):
         """Sets a channel to OFF (value=0) or ON (value=non-0).
            Increments a count with each "ON".  Decrements with
@@ -1034,7 +1013,6 @@ class ValvePort(object):
             return True
         else:
             return False
-
 
     def setEvent(self, event):
         """Set a channel by a ControlEvent event. Maintains
@@ -1056,24 +1034,22 @@ class ValvePort(object):
             else:
                 return False
 
-
     def oneChannel(self, channel, value=1):
         """Sets ONE channel ON (default), all others off
            Use execute() to write the changes to the channels"""
         if self.channel_map is not None:
             channel = self.channel_map.lookup(channel)
 
-        #set all channels to OFF
+        # set all channels to OFF
         for i in range(0, self.num_channels):
-            self.channels[i]=0
+            self.channels[i] = 0
 
         # Set this channel to VALUE
         if channel > 0 or channel <= self.num_channels:
-            self.channels[channel-1]=value
+            self.channels[channel-1] = value
             return True
         else:
             return False
-
 
     def execute(self):
         """Write the current (internal) state of the channels
@@ -1084,24 +1060,19 @@ class ValvePort(object):
         for i in range(0, self.num_channels):
             self.execstate[i] = self.channels[i]
 
-
     def reset(self):
         """ Clears all channels and sends to the hardware"""
-        #set all channels to OFF
+        # set all channels to OFF
         for i in range(0, self.num_channels):
-            self.channels[i]=0
-
+            self.channels[i] = 0
         self.execute()
-
 
     def all_on(self):
         """Sets all channels on and writes to the hardware"""
-        #set all channels to ON
+        # set all channels to ON
         for i in range(0, self.num_channels):
-            self.channels[i]=1
-
+            self.channels[i] = 1
         self.execute()
-
 
     def setChannelExec(self, channel, value):
         """Changes the state of one channel and sends the change
@@ -1109,22 +1080,20 @@ class ValvePort(object):
         if self.channel_map is not None:
             channel = self.channel_map.lookup(channel)
 
-        if (self.setChannel(channel, value)):
+        if self.setChannel(channel, value):
             self.execute()
             return True
         else:
             return False
-
 
     def setEventExec(self, event):
         """Changes the state of one channel and sends the change
             immediately to the channel device"""
-        if(self.setEvent(event)):
+        if self.setEvent(event):
             self.execute()
             return True
         else:
             return False
-
 
     def oneChannelExec(self, channel, value=1):
         """Changes the state of one channel clearing all others
@@ -1132,16 +1101,16 @@ class ValvePort(object):
         if self.channel_map is not None:
             channel = self.channel_map.lookup(channel)
 
-        if (self.oneChannel(channel, value)):
+        if self.oneChannel(channel, value):
             self.execute()
             return True
         else:
             return False
 
 
+# ***************** ValvePort_GUI *************************
 
-#***************** ValvePort_GUI *************************
-    
+
 class ValvePort_GUI(ValvePort):
     """GUI display implementation of ValvePort class.  Displays the
     valve action as "lights" on a BitmapCanvas object """
@@ -1149,7 +1118,7 @@ class ValvePort_GUI(ValvePort):
     def __init__(self, channels=24, channelsperbank=6, canvas=None):
         ValvePort.__init__(self, channels, channelsperbank)
         self.canvas = canvas
-        self.lights = [(0,0)] * channels
+        self.lights = [(0, 0)] * channels
         for i in range(0, channels):
             self.lights[i] = (25 * 1, 0)
 
@@ -1158,28 +1127,27 @@ class ValvePort_GUI(ValvePort):
         for i in range(0, self.num_channels):
             if self.execstate[i] != self.channels[i]:
                 if self.channels[i] > 0:
-                    self.canvas.fillColor=(255,20,20)
+                    self.canvas.fillColor = (255, 20, 20)
                 else:
-                    self.canvas.fillColor=(100,100,100)
+                    self.canvas.fillColor = (100, 100, 100)
                     
-                self.canvas.drawEllipse(self.lights[i],(20,20))
+                self.canvas.drawEllipse(self.lights[i], (20, 20))
 
         # set the exec state array
         ValvePort.execute(self)
 
     def set_light(self, channel, position):
         """channel number starting at 0; position is a typle of x,y"""
-        #if self.channel_map is not None:
+        # if self.channel_map is not None:
         #    channel = self.channel_map.reverseLookup(channel)
 
         if 0 < channel <= self.num_channels:
             self.lights[channel - 1] = position        
        
         
+# ***************** ValvePort_Parallel *************************
 
 
-#***************** ValvePort_Parallel *************************
-    
 class ValvePort_Parallel(ValvePort):
     """Parallel port implementation of ValvePort classe
         this was used in the original Parable versions """
@@ -1266,29 +1234,29 @@ class ValvePort_Parallel(ValvePort):
             setEvent() to update channel state before sending
             to the ports."""
         data = 0
-        base_channel = 0 # first channel for this bank
+        base_channel = 0  # first channel for this bank
         
-        #how many banks need to be updated?
+        # how many banks need to be updated?
         banks = self.num_channels // self.channelsPerBank
         for bk in range(0, banks):  # bank number, 0-based
             base_channel = self.channelsPerBank * bk
             data = 0
 
             # update each channel in the bank
-            for ch in range (0, self.channelsPerBank):
-                chnl = ch + base_channel # get channel number, 0-based
+            for ch in range(0, self.channelsPerBank):
+                chnl = ch + base_channel  # get channel number, 0-based
                 if self.channels[chnl] > 0:
-                    #Write a bit to data
+                    # Write a bit to data
                     data |= operator.lshift(1, ch)
 
-            if (self.py is not None):
+            if self.py is not None:
                 self.py.setData(data | (bk << 6))
                 self.py.setDataStrobe(0)
                 self.py.setDataStrobe(0)            
                 self.py.setDataStrobe(1)
 #               print 'Data written: %2.2X' % (data | (bk << 7))
         
-        #FUTURE: update the prev_channels array to keep track of changes
+        # FUTURE: update the prev_channels array to keep track of changes
 
     """
     def reset(self):
@@ -1341,29 +1309,9 @@ class ValvePort_Parallel(ValvePort):
     """
 
 
-#***************** ValvePort_Beep *************************
+# *********************** ValvePortBank ****************************
 
 
-class ValvePort_Beep(ValvePort):
-    def __init__(self, channels=24, channelsperbank=6):
-        self.mute = False  # don't produce an output
-        ValvePort.__init__(self, channels, channelsperbank)
-
-    def execute(self):
-        """Display the output of the sequence on a bitmap canvase"""
-        if not self.mute:
-            for i in range(0, self.num_channels):
-                if self.execstate[i] != self.channels[i]:
-                    if self.channels[i] > 0:
-                        winsound.Beep(440, 1)
-
-        # set the exec state array
-        ValvePort.execute(self)
-
-
-
-#*********************** ValvePortBank ****************************
-    
 class ValvePortBank(ValvePort):
     """ This is a container class for one or more ValvePort instances.
         This allows multiple outputs to be written the sequence.  It
@@ -1438,602 +1386,9 @@ class ValvePortBank(ValvePort):
             self.ports[i].oneChannelExec(channel, value)
         return True
 
-
-
-
-
-#********************************************************
-# These are functions used for testing and running shows
-#********************************************************
-
-def kill():
-    vp = ValvePort(channels=12)
-    vp.reset()    
-
-
-def run(control_list, vp=None):
-    """Runs a control list in real time,
-        sending commands to the port hardware"""
-#    print control_list
-    if vp is None:
-        vp = ValvePort(channels=12)
-
-    try:
-        control_list.execute(vp)
-    except:
-        vp.reset()
-        print('Reset on exception.')
-    vp.reset()
-    return None
-
-
-def rsweep(step_period, pulse_duration):
-    """ Creates and runs a left-to-right monotonic sweep"""
-    cl = ControlList()
-    ev_time = TimeCode(0)
-    duration = TimeCode(pulse_duration)
-    period = TimeCode(step_period)
-    
-    for i in range(1, 13):
-        ev = ControlEvent(channel=i, action='on', time=ev_time, duration=0, \
-                         value=1, level=0)
-        cl.addEvent(ev)
-        ev.time.addTime(duration)
-        ev.action='off'
-        cl.addEvent(ev)
-
-        ev_time.addTime(period)
-        
-    cl.sortEvents()
-    return (cl)
-
-
-def lsweep(step_period, pulse_duration):
-    """ Creates and runs a left-to-right monotonic sweep"""
-    cl = ControlList()
-    ev_time = TimeCode(0)
-    duration = TimeCode(pulse_duration)
-    period = TimeCode(step_period)
-    
-    for i in range(1, 13):
-        ev = ControlEvent(channel=13-i, action='on', time=ev_time, duration=0, \
-                         value=1, level=0)
-
-        # Append ON and OFF events
-        cl.addEvent(ev)
-        ev.time.addTime(duration)
-        ev.action='off'
-        cl.addEvent(ev)
-        
-        ev_time.addTime(period)
-
-    cl.sortEvents()
-    return (cl)
-
-
-def pause(duration=30):
-    """ Creates a pause in which all channels are off for duration """
-    cl = ControlList()
-    dur = TimeCode(duration)
-    ev = ControlEvent(channel=0, action='off', time=0, duration=0, \
-                     value=1, level=0)    
-    for i in range(1, 13):
-        ev.channel = i
-        cl.addEvent(ev)
-
-    # Add dummy placekeeper event (NOOP) 
-    ev.channel=0
-    ev.time.setTime(dur)
-    cl.addEvent(ev)
-
-    cl.sortEvents()
-    return (cl)
-
-
-def beep(chanl, duration=12, pause=0, start_time=0, level=0, sequence=0):
-    """ Opens one channel for duration """
-    cl = ControlList()
-    start = TimeCode(start_time)
-    end = TimeCode(start_time + duration)
-    paus = TimeCode(pause)
-
-    # Add ON event
-    ev = ControlEvent(channel=chanl, action='on', time=start, duration=duration, \
-                     value=1, level=level, sequence=sequence)    
-    cl.addEvent(ev)
-
-    # Add OFF event
-    ev.action='off'
-    ev.time.setTime(end)
-    cl.addEvent(ev)
-
-    # Add pause events if pause is set
-    if paus.total_frames > 0:
-        ev.channel = 0
-        cl.addEvent(ev)
-        ev.time = TimeCode(end.total_frames + paus.total_frames)
-        cl.addEvent(ev)
-    
-    cl.sortEvents()
-    return (cl)
-
-
-def rand_beep(duration=1, pause=0, start_time=0, level=0, sequence=0):
-    ch = random.randint(1, 12)
-    return(beep(ch, duration, pause, start_time, level, sequence))
-
-
-def bang(duration=12):
-    """ Opens all channels simultaneously for duration """
-    cl = ControlList()
-    zero = TimeCode(0)
-    dur = TimeCode(duration)
-
-    # Add ON events
-    ev = ControlEvent(channel=0, action='on', time=0, duration=0, \
-                     value=1, level=0)    
-    for i in range(1, 13):
-        ev.channel = i
-        cl.addEvent(ev)
-
-    # Add OFF events
-    ev.action='off'
-    ev.time.setTime(dur)
-
-    for i in range(1, 13):
-        ev.channel = i
-        cl.addEvent(ev)
-    
-    cl.sortEvents()
-    return (cl)
-
-
-def whizbang(stage_right=False):
-    """ Makes a right-to-left sweep, then BANG BANG BANG BANG! """
-    # Bang:
-    cl1 = bang(4)
-    cl1.append(pause(5))
-    # Whiz:
-    if stage_right:
-        cl = rsweep(3, 8)
-    else:
-        cl = lsweep(3, 8)
-        
-    cl.append(pause(13))
-    # Whiz + four bangs:
-    cl.append(cl1)
-    cl.append(cl1)
-    cl.append(cl1)
-    cl.append(cl1)
-
-    cl.sortEvents()
-    return(cl)
-
-
-def fourbang(level=0, sequence=0):
-    """ For random bangs in quick succession"""
-
-    cl = ControlList()
-    ev = ControlEvent(channel=0, action='on', time=0, duration=0, \
-                     value=1, level=level, sequence=sequence)    
-
-    # Add four 
-    for i in range(4):
-        ch = random.randint(1, 12)
-        li = beep(ch, 2, 1, level=level, sequence=sequence)
-        cl.append(li)
-        
-    cl.sortEvents()
-    return (cl)
-        
-
-def foursweep(level=0, sequence=0):
-    """ A sweep of four beeps in quick succession starting at a random point"""
-    cl = ControlList()
-
-    # Pick a starting point and direction (increment value)
-    incr = random.choice((-1, 1))
-    start = random.randint(1, 12)
-    if (incr < 0 and start < 4):
-        incr = 1
-    elif (incr > 0 and start > 9):
-        incr = -1
-    
-    # set up first ControlEvent
-    ch = start
-    
-    # Add four 
-    for i in range(4):
-        li = beep(ch, 2, 1, level=level, sequence=sequence)
-        cl.append(li)
-        ch += incr
-        
-    cl.sortEvents()
-    return (cl)
-        
-
-def w(num_channels=12, level=0, sequence=0):
-    """Two alternating sweeps from the center out"""
-    cl = ControlList()
-    beep_length = 3  # how long the beep lasts (frames)
-    beep_period = 2  # how long between channels (frames)
-    beep_time = 0
-    
-    left = num_channels // 2
-    if num_channels % 2 == 0:
-        # no middle channel
-        middle = 0
-        right = left + 1
-    else:
-        # middle channel
-        middle = num_channels / 2
-        right = left + 2
-
-    # add middle channel
-    if (middle > 0):
-        li = beep(middle, duration=beep_length, start_time=beep_time)
-        beep_time += beep_period
-        cl.append(li)
-
-    # add sequences
-    while left > 0:
-        li = beep(left, duration=beep_length, start_time=beep_time)
-        cl.append(li)
-        li = beep(right, duration=beep_length, start_time=beep_time)
-        cl.append(li)
-        
-        beep_time += beep_period
-        left -= 1
-        right += 1
-
-    # sort and finish
-    cl.sortEvents()
-    return (cl)
-
-def v(num_channels=12, dur=4, per=2, level=0, sequence=0):
-    """Two concurrent sweeps from the center out"""
-    cl = ControlList()
-    beep_length = dur  # how long the beep lasts (frames)
-    beep_period = per  # how long between channels (frames)
-    beep_time = 0
-    
-    left = num_channels // 2
-    if num_channels % 2 == 0:
-        # no middle channel
-        middle = 0
-        right = left + 1
-    else:
-        # middle channel
-        middle = num_channels / 2
-        right = left + 2
-
-    # add middle channel
-    if middle > 0:
-        li = beep(middle, duration=beep_length, start_time=beep_time, level=level, sequence=sequence)
-        beep_time += beep_period
-        cl.overlay(li)
-
-    # add sequences
-    while left > 0:
-        li = beep(left, duration=beep_length, start_time=beep_time, level=level, sequence=sequence)
-        cl.overlay(li)
-        li = beep(right, duration=beep_length, start_time=beep_time, level=level, sequence=sequence)
-        cl.overlay(li)
-        
-        beep_time += beep_period
-        left -= 1
-        right += 1
-
-    # sort and finish
-    cl.sortEvents()
-    return (cl)
-
-
-def swing():
-    cl = lsweep(3, 2)
-    cl.append(rsweep(3, 2))
-    cl.append(pause(10))
-    cl.append(bang(8))
-    return(cl)
-
-
-def randy(iterations, num_channels=12, beep_dur=3, per=2, level=0, sequence=0):
-    """randomly fires the cannons"""
-    cl = ControlList()
-    start = 0
-    for i in range(0, iterations):
-        ch = random.randint(1, num_channels)
-        ev = beep(ch, duration=beep_dur, start_time=start, level=level)
-        cl.overlay(ev)
-        start += random.randint(0, per)
-
-    cl.sortEvents()
-    return(cl)
-
-
-def flying_v(iterations):
-    """Combines V with randy"""
-    cl = randy(iterations, level=1)
-    cl.overlay(v(dur=200, per=30, level=2))
-    return(cl.reconcile())
-
-
-def los_endos():
-    cl = rsweep(2, 2)
-    cl.append(lsweep(2,2))
-    cl.overlay(w(), TimeCode(0))
-    point = cl.append(v())
-#    print "Point: %s" % point.__str__()
-#    li = randy(200)
-#    li.offsetTime(point.total_frames + 8)
-#    cl.overlay(li)
-    cl.overlay(randy(200), point.total_frames + 8)
-    cl.overlay(v(dur=10, per=2), point.total_frames + 90)
-#    cl.overlay(foursweep(), TimeCode(45))
-#    cl.overlay(foursweep(), TimeCode(60))
-    cl.append(pause(90))
-    cl.append(bang(10))
-    cl.append(pause(4))
-    cl.append(bang(10))
-    cl.append(pause(4))
-    cl.append(bang(10))
-    cl.append(pause(4))
-    cl.append(bang(10))
-    return(cl)
-
-def pair1():
-    cl = beep(1, 2)
-    cl.overlay(beep(3, 2))
-    return(cl)
-
-def pair2():
-    cl = beep(3, 2)
-    cl.overlay(beep(5, 2))
-    return(cl)
-
-def pair3():
-    cl = beep(5, 2)
-    cl.overlay(beep(7, 2))
-    return(cl)
-
-def pair4():
-    cl = beep(7, 2)
-    cl.overlay(beep(9, 2))
-    return(cl)
-
-def pair5():
-    cl = beep(9, 2)
-    cl.overlay(beep(11, 2))
-    return(cl)
-
-def spiral(iterations=0, channels=12, dur=2, start_per=12, end_per=1, accel=1):
-    ch = channels
-    num_loops = iterations
-    period = start_per
-    
-    if num_loops == 0:
-        num_loops = (start_per - end_per) // accel
-    
-    cl = beep(ch, dur, period)
-    for i in range(1, num_loops - 1):
-        ch -= 1
-        if ch <= 0:
-            ch = channels
-
-        period -= accel
-        if period < end_per:
-            period = end_per
-            
-        cl.append(beep(ch, dur, period))
-
-    return(cl)
-
-
-def blow():
-    cl = bang(5400)
-    return(cl)
-
-
-def runit():
-    for i in range(1, 1000):
-        v.all_on()
-        v.reset()
-
-
-
-def go(vp, queue_obj):
-    print('ENTERING GO\n')
-    cl = ControlList()
-
-    cl.execute(vp, queue_obj)
-    print('\nLEAVING GO\n')
-    return None
-
-
-def new_main():
-    running = True
-    q = Queue(32)
-    vp = ValvePort(channels=12)
-
-#    print 'Preparing lists...'
-#    clV = v()
-#    clW = w()
-#    clFLYINGV = flying_v(200)
-#    clRANDY = randy(300)
-#    clBANG = bang(10)
-#    clLSWEEP = lsweep(2, 3)
-#    clRSWEEP = rsweep(2, 3)
-#    clLSWEEP2 = lsweep(1, 3)
-#    clRSWEEP2 = rsweep(1, 3)
-#    clWHIZBANG = whizbang()
-#    clPAIR1 = pair1()
-#    clPAIR2 = pair2()
-#    clPAIR3 = pair3()
-#    clPAIR4 = pair4()
-#    clPAIR5 = pair5()
-   
-    # start playback thread
-    th = threading.Thread(target=go, args=(vp, q,))
-    th.setDaemon(True)
-    th.start()
-
-    while running:
-        seq = raw_input('sequence: ')
-        if seq == 'x':
-            running = False
-        else:
-            if seq == "v":
-                q.put(clV)
-            elif seq == "f":
-                run(foursweep())
-            elif seq == "1":
-                run(clPAIR1)
-            elif seq == "2":
-                run(clPAIR2)
-            elif seq == "3":
-                run(clPAIR3)
-            elif seq == "4":
-                run(clPAIR4)
-            elif seq == "5":
-                run(clPAIR5)
-            elif seq == "fb":
-                run(fourbang())
-            elif seq == "w":
-                q.put(clW)
-            elif seq == ".":
-                run(rand_beep(2))
-            elif seq == "fv":
-                q.put(clFLYINGV)
-            elif seq == "r":
-                q.put(clRANDY)
-            elif seq == " ":
-                q.put(clBANG)
-            elif seq == "<":
-                q.put(clLSWEEP)
-            elif seq == ">":
-                q.put(clRSWEEP)
-            elif seq == "<<":
-                q.put(clLSWEEP2)
-            elif seq == ">>":
-                q.put(clRSWEEP2)
-            elif seq == "wb":
-                q.put(clWHIZBANG)
-            elif seq == "x":
-                running = False
-                print('Terminated')
-            else:
-                print('Unknown sequence use v w . fv ? < >')
-
-    print('\nwaiting for thread to finish')
-    th.join()
-    print('Done')
-    return None
-    
-    
-    
-
-def main():
-    vp = ValvePort(channels=12)
-
-#    print 'Preparing lists...'
-#    clV = v()
-#    clFOURSWEEP = foursweep()
-#    clFOURBANG = fourbang()
-#    clW = w()
-#    clRANDBEEP = rand_beep(2)
-#    clFLYINGV = flying_v(200)
-#    clRANDY = randy(300)
-#    clBANG = bang(10)
-#    clLSWEEP = lsweep(3, 3)
-#    clRSWEEP = rsweep(3, 3)
-#    clLSWEEP2 = lsweep(1, 2)
-#    clRSWEEP2 = rsweep(1, 2)
-#    clWHIZBANG = whizbang()
-#    clWHIZBANGR = whizbang(True)
-#    clBLOW = blow()
-#    clLOSENDOS = los_endos()
-#    clPAIR1 = pair1()
-#    clPAIR2 = pair2()
-#    clPAIR3 = pair3()
-#    clPAIR4 = pair4()
-#    clPAIR5 = pair5()
-#    clSPIRAL = spiral(120)
-#    clSWING = swing()
-
-   
-    running = True
-    while running:
-        seq = raw_input("sequence: ")
-        if seq == "v":
-            run(clV, vp)
-        elif seq == "f":
-            run(foursweep(), vp)
-        elif seq == "fb":
-            run(fourbang(), vp)
-        elif seq == "1":
-            run(clPAIR1)
-        elif seq == "2":
-            run(clPAIR2)
-        elif seq == "3":
-            run(clPAIR3)
-        elif seq == "4":
-            run(clPAIR4)
-        elif seq == "5":
-            run(clPAIR5)
-        elif seq == "w":
-            run(clW, vp)
-        elif seq == ".":
-            run(rand_beep(2), vp)
-        elif seq == "fv":
-            run(clFLYINGV, vp)
-        elif seq == "r":
-            run(clRANDY, vp)
-        elif seq == "s":
-            run(clSPIRAL, vp)
-        elif seq == " ":
-            run(clBANG, vp)
-        elif seq == "r":
-            run(randy(50, beep_dur=1), vp)
-        elif seq == "<":
-            run(clLSWEEP, vp)
-        elif seq == ">":
-            run(clRSWEEP, vp)
-        elif seq == "<<":
-            run(clLSWEEP2, vp)
-        elif seq == ">>":
-            run(clRSWEEP2, vp)
-        elif seq == "wb":
-            run(clWHIZBANG, vp)
-        elif seq == "wbl" or seq == "wbr":
-            run(clWHIZBANGR, vp)
-        elif seq == "le":
-            run(clLOSENDOS, vp)
-        elif seq == "blow":
-            run(clBLOW, vp)
-        elif seq == "sw":
-            run(clSWING, vp)
-        elif seq == "xx":
-            running = False
-            print('Terminated')
-        else:
-            print('Unknown sequence use v f fb w . <sp> fv ? < > << >> 1-5  ')
-            
-    
-
-cl1 = ControlList()
-cl1.addEvent(ControlEvent(channel=1,value=1,level=1,time=6,action="off"))
-cl1.addEvent(ControlEvent(channel=1,value=1,level=2,time=5,action="on"))
-cl1.addEvent(ControlEvent(channel=1,value=1,level=1,time=4,action="on"))
-
-if __name__ == "main":
-    main()
-
-
-            
 # Initializing a ControlList with another ControlList does not work
 # Make sure to preserve all channel-0 as these may be time-keeper NOOPs
 # Adding TimeCode objects does not return a TimeCode object (doesn't work)
 # overlay() sorts list each time.  May not be wanted always
 # first event played back (usually ch0) does not clear out - maybe it's getting a count > 1
 # make control list a proper iterator
-

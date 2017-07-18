@@ -122,9 +122,9 @@ class ParaPlayer(threading.Thread):
             return float(self.player.get_time() / 1000)
 
     def report_time(self):
-        time = self.get_time()
-        print(time)
-        return time
+        rtime = self.get_time()
+        print(rtime)
+        return rtime
 
     def loop(self, start, end, pause=False, loop_callback_fn=None):
         """Plays the player in a loop, optionally pausing at the end of the loop, optionally calling a callback when
