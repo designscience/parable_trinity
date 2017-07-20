@@ -3,7 +3,7 @@ import kivy
 # import logging
 import sys
 import vlc
-# import time
+import time
 # import threading
 # import Queue
 import multiprocessing
@@ -14,19 +14,15 @@ import parclasses
 
 
 from kivy.app import App
-from kivy.uix.floatlayout import FloatLayout
+# from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.button import Button
+from kivy.clock import Clock
 
 os.environ['KIVY_IMAGE'] = 'pil,sdl2'
-kivy.require('1.9.1')
+kivy.require('1.10.0')
 __version__ = "1.0.0"
 
 MRL = '/Users/Stu/Documents/Compression/Keith/Keith Emerson Tribute rev1.mp3'
-
-
-class AppLayout(FloatLayout):
-    @staticmethod
-    def hello():
-        return 'hi there'
 
 
 class TrinityApp(App):
@@ -37,7 +33,7 @@ class TrinityApp(App):
         self.num_channels = 18  # number of output channels
         self.num_buttons = 35  # number of possible sequence buttons
 
-        self.ui = AppLayout(size=(1280, 720))
+        self.ui = parascreens.UserInterface()
         self.home_screen = None
         # self.player = paraplayer.ParaPlayer()
 
@@ -60,6 +56,8 @@ class TrinityApp(App):
         self.straight_map.addMapping(23, 0)
         self.straight_map.addMapping(24, 0)
 
+        self.lights = []
+
         # create ValvePort (output) objects
         # self.vp1 = parclasses.ValvePort_GUI(22, 6, self.components.OutputCanvas1)
         # self.vp1.setMap(self.straight_map)
@@ -81,14 +79,27 @@ class TrinityApp(App):
         # Render the home screen
         self.home_screen = parascreens.HomeScreen(self)
         self.ui.clear_widgets()
-        # self.ui.add_widget(self.home_screen)
+        self.ui.add_widget(self.home_screen)
 
         # Render lights
+        self.home_screen.clear()
         for i in range(0, self.num_channels):
-            light = parascreens.ChannelLight('light{0}'.format(i), i * 100, 100)
-            self.ui.add_widget(light)
+            light = parascreens.ChannelLight(i)
+            self.home_screen.ids['light_panel'].add_widget(light)
+            light.on()
+            self.lights.append(light)
 
+        Clock.schedule_once(self.startup, 1)
         return self.ui
+
+    def startup(self, dt):
+        """Initiates actions once after the main program loop has been entered"""
+        # Douse the lights
+        for i in range(0, self.num_channels):
+            time.sleep(0.2)
+            print('Turning off light {0}'.format(i))
+            self.lights[i].off()
+        return False
 
     def cleanup(self):
         """Clean up threads at program exit"""

@@ -1,73 +1,50 @@
 #:kivy 1.9.1
 
+<UserInterface>:
+    id: main_ui
+
+
 <HomeScreen>:
     id: home_screen
-    Button:
-        id: activate_button
-        size: self.parent.width, self.parent.height
-        background_color: [1, 1, 1, 1]
-        background_normal: ''
-        background_down: ''
-        on_press: root.app.cleanup()
-        Label:
-            text: 'touch screen to begin'
-            top: self.parent.height * 0.4
-            center_x: self.parent.center_x
-            font_size: '25px'
-            color: [.6,.6,.6,1]
-        Label:
-            id: command_echo
-            text: ''
-            top: self.parent.height * 0.34
-            center_x: self.parent.center_x
-            font_size: '30px'
-            color: [.6,.6,.2,1]
-        Button:
-            id: util_button
-            size: '70px', '70px'
-            y: self.height / 2
-            x: self.parent.width - (self.width * 1.5)
-            background_color: [1, 1, 1, 1]
-            background_normal: ''
-            background_down: 'images/scissor_icon.png'
-            on_press: root.test2()
-            Image:
-                source: 'images/scissor_icon_xpar15.png'
-                width: '50px'
-                height: '50px'
-                x: self.parent.x + 10
-                y: self.parent.y + 10
-
-
-<ChannelLight>:
-    pos_hint: None, None
-    size_hint: None, None
-    size: 100, 100
-    canvas:
+    canvas.before:
         Color:
-            rgba: 1, 0, 1, 1
-#        Rectangle:
-#            size: self.size
-#            pos: self.pos
-    Image:
-        size_hint: None, None
-        source: 'images/flame-north.png'
-        width: '100px'
-        height: '100px'
-        x: 0
-        y: 0
-
-<AppLayout>:
-    id: app_layout
-    canvas:
-        Color:
-            rgba: 1, 0, 1, 1
+            rgba: 1, 1, 1, 1
         Rectangle:
             size: self.size
             pos: self.pos
-    FloatLayout:
+    Button:
+        size_hint: 0.2, 0.1
+        pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+        id: activate_button
+        text: 'help me'
+        size: self.parent.width, self.parent.height
+    StackLayout:
         id: light_panel
+        canvas.before:
+            Color:
+                rgba: 1, 1, 1, 1
+            Rectangle:
+                size: self.size
+                pos: self.pos
         size_hint: None, None
-        width: self.parent.width
-        height: '200px'
+        size: '1800px', '100px'
+        pos_hint: {'center_x': 0.5, 'top': 0.98}
+
+<ChannelLight>:
+    canvas.before:
+        Color:
+            rgba: 1, 1, 1, 0.5
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    size_hint: None, None
+    size: 100, 100
+    Image:
+        id: flame
+        source: ''
+        left: 0
+
+
+
+
 
