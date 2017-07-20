@@ -4,13 +4,14 @@ import kivy
 import sys
 import vlc
 import time
-# import threading
+import threading
 # import Queue
 import multiprocessing
 
 # import paraplayer
 import parascreens
 import parclasses
+import parthreads
 
 
 from kivy.app import App
@@ -59,15 +60,26 @@ class TrinityApp(App):
         self.straight_map.addMapping(23, 0)
         self.straight_map.addMapping(24, 0)
 
-        # Prepare for lights
-        self.lights = []
-        self.vp1 = None
+        # temp sequence rate scaling factor (playback rate)
+        self.scaleFactor = 1.10
 
+        # create the temp sequence object - used to try out sequences
+        self.seq = parclasses.ControlList()
+        self.seq.name = "Temp Sequence"
 
-        print('VLC version: ' + str(vlc.libvlc_get_version()))
+        # Create the threaded sequence handler (ControlBank)
+        self.cb = parthreads.ControlBank("/Users/Stu/Sequences")
+
+        # Uninitiated objects
+        self.lights = []  # array of ChannelLight objects for GUI display
+        self.ttemp = None  # Sequence thread
+        self.tmain = None  # Sequence thread
+        self.vp1 = None  # ValvePort output
+        self.vp2 = None  # ValvePort output
+        self.vpb = parclasses.ValvePortBank()
 
     def build(self):
-        """ Instantiates UI widgets and returns the root widget """
+        """ Instantiates UI widgets, loads machinery, and returns the root widget """
         # self.player.set_media(MRL, 1.5)
         # self.player.set_finish_callback(self.on_completion)
 
@@ -93,6 +105,28 @@ class TrinityApp(App):
         # create ValvePort (output) objects
         self.vp1 = parclasses.ValvePort_Kivy(22, 6, self.lights)
         self.vp1.setMap(self.straight_map)
+
+        # Other output objects
+        self.vp2 = parclasses.ValvePort_Parallel(24, 6)
+        self.vp2.setMap(self.straight_map)
+
+        # add output objects to an output bank
+        self.vpb.addPort(self.vp1)
+        self.vpb.addPort(self.vp2)
+        self.vpb.execute()   # show the lights
+
+        # Create initial temp sequence
+        li = parclasses.randy(64, 22, 1, 2)
+        self.seq.append(li)
+        self.seq.sortEvents()
+
+        # Create thread objects
+        self.ttemp = threading.Thread(target=self.seq, args=(self.temp_ev_queue, self.temp_out_queue))
+        self.tmain = threading.Thread(target=self.cb, args=(self.ev_queue, self.out_queue, self.in_queue))
+
+        # TODO: add a Kivy Clock schedule
+        # self.myTimer = timer.Timer(self.components.OutputCanvas1, -1) # create a timer
+        # self.myTimer.Start(5)
 
         # Animate lights then douse them
         self.bulb()

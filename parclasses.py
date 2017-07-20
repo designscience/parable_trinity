@@ -29,7 +29,7 @@ from __future__ import division
 import parallel
 import operator
 import time
-# import random
+import random
 # import os
 # import sys
 # import threading
@@ -651,8 +651,9 @@ class ControlList(object):
                     levelMap[ev.level] = 1
                 
                 # Check for a change in state
-                tempState = self.mapState(levelMap)
-                
+                # tempState = self.mapState(levelMap)
+                tempState = self.State(levelMap)  # @@@ SD'A corrected 7/17
+
                 if currentState != tempState:
                     # state has changed! Create a new level 0 event
                     currentState = tempState
@@ -1152,8 +1153,10 @@ class ValvePort_Kivy(ValvePort):
     """Kivy GUI display implementation of ValvePort class. Displays the valve action as "lights" on
      a ChannelLight object. The lights parameter is an array of ChannelLights objects"""
 
-    def __init__(self, channels=24, channelsperbank=6, lights=[]):
+    def __init__(self, channels=24, channelsperbank=6, lights=None):
         ValvePort.__init__(self, channels, channelsperbank)
+        if lights is None:
+            lights = []
         self.lights = lights
         self.num_available = len(self.lights)
 
@@ -1411,6 +1414,49 @@ class ValvePortBank(ValvePort):
         for i in range(self.numports):
             self.ports[i].oneChannelExec(channel, value)
         return True
+
+# ~~~~~~~~~~~~~~~~~~~ legacy sequences ~~~~~~~~~~~~~~~~~~~~~~~
+
+
+def beep(chanl, duration=12, pause=0, start_time=0, level=0, sequence=0):
+    """ Opens one channel for duration """
+    cl = ControlList()
+    start = TimeCode(start_time)
+    end = TimeCode(start_time + duration)
+    paus = TimeCode(pause)
+
+    # Add ON event
+    ev = ControlEvent(channel=chanl, action='on', time=start, duration=duration, \
+                      value=1, level=level, sequence=sequence)
+    cl.addEvent(ev)
+
+    # Add OFF event
+    ev.action = 'off'
+    ev.time.setTime(end)
+    cl.addEvent(ev)
+
+    # Add pause events if pause is set
+    if paus.total_frames > 0:
+        ev.channel = 0
+        cl.addEvent(ev)
+        ev.time = TimeCode(end.total_frames + paus.total_frames)
+        cl.addEvent(ev)
+
+    cl.sortEvents()
+    return cl
+
+def randy(iterations, num_channels=12, beep_dur=3, per=2, level=0, sequence=0):
+    """randomly fires the cannons"""
+    cl = ControlList()
+    start = 0
+    for i in range(0, iterations):
+        ch = random.randint(1, num_channels)
+        ev = beep(ch, duration=beep_dur, start_time=start, level=level)
+        cl.overlay(ev)
+        start += random.randint(0, per)
+
+    cl.sortEvents()
+    return cl
 
 # Initializing a ControlList with another ControlList does not work
 # Make sure to preserve all channel-0 as these may be time-keeper NOOPs
