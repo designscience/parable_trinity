@@ -8,6 +8,7 @@ from kivy.uix.image import Image
 # from kivy.config import Config
 # from kivy.graphics import Canvas
 # from kivy.uix.label import Label
+from kivy.animation import Animation
 # import logging
 import time
 
@@ -31,17 +32,19 @@ class ChannelLight(RelativeLayout):
         """Init uses an index starting at 0 to load the correct flame image file"""
         super(RelativeLayout, self).__init__()
         if index % 3 == 0:
-            self.ids.flame.source = 'images/flame-northwest.png'
+            self.on_source = 'images/flame-northwest.png'
+            self.off_source = 'images/pilot-northwest.png'
         elif index % 3 == 1:
-            self.ids.flame.source = 'images/flame-north.png'
+            self.on_source = 'images/flame-north.png'
+            self.off_source = 'images/pilot-north.png'
         else:
-            self.ids.flame.source = 'images/flame-northeast.png'
+            self.on_source = 'images/flame-northeast.png'
+            self.off_source = 'images/pilot-northeast.png'
+        self.ids.flame.source = self.off_source
 
     def on(self):
-        self.opacity = 1.0
-        self.ids.flame.canvas.ask_update()
+        self.ids.flame.source = self.on_source
 
     def off(self):
-        self.opacity = 0.0
-        self.ids.flame.canvas.ask_update()
+        self.ids.flame.source = self.off_source
 

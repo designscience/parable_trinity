@@ -24,14 +24,17 @@ __version__ = "1.0.0"
 
 MRL = '/Users/Stu/Documents/Compression/Keith/Keith Emerson Tribute rev1.mp3'
 
-
 class TrinityApp(App):
     def __init__(self):
         App.__init__(self)
+        self.title = 'Parable Trinity'
+        self.icon = 'images/svlogo_sm.ico'
 
         # Settings
         self.num_channels = 18  # number of output channels
         self.num_buttons = 35  # number of possible sequence buttons
+
+        self.countdown = 0
 
         self.ui = parascreens.UserInterface()
         self.home_screen = None
@@ -56,11 +59,10 @@ class TrinityApp(App):
         self.straight_map.addMapping(23, 0)
         self.straight_map.addMapping(24, 0)
 
+        # Prepare for lights
         self.lights = []
+        self.vp1 = None
 
-        # create ValvePort (output) objects
-        # self.vp1 = parclasses.ValvePort_GUI(22, 6, self.components.OutputCanvas1)
-        # self.vp1.setMap(self.straight_map)
 
         print('VLC version: ' + str(vlc.libvlc_get_version()))
 
@@ -86,20 +88,30 @@ class TrinityApp(App):
         for i in range(0, self.num_channels):
             light = parascreens.ChannelLight(i)
             self.home_screen.ids['light_panel'].add_widget(light)
-            light.on()
             self.lights.append(light)
 
-        Clock.schedule_once(self.startup, 1)
+        # create ValvePort (output) objects
+        self.vp1 = parclasses.ValvePort_Kivy(22, 6, self.lights)
+        self.vp1.setMap(self.straight_map)
+
+        # Animate lights then douse them
+        self.bulb()
         return self.ui
+
+    def bulb(self):
+        """Purely for testing and panache... shows alll lights then extinguishes them"""
+        for i in range(0, self.num_channels):
+            self.lights[i].on()
+        self.countdown = 0
+        Clock.schedule_interval(self.startup, 0.03)
 
     def startup(self, dt):
         """Initiates actions once after the main program loop has been entered"""
         # Douse the lights
-        for i in range(0, self.num_channels):
-            time.sleep(0.2)
-            print('Turning off light {0}'.format(i))
-            self.lights[i].off()
-        return False
+        if self.countdown < self.num_channels:
+            self.lights[self.countdown].off()
+            self.countdown += 1
+        return self.countdown < self.num_channels
 
     def cleanup(self):
         """Clean up threads at program exit"""

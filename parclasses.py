@@ -1145,6 +1145,32 @@ class ValvePort_GUI(ValvePort):
             self.lights[channel - 1] = position        
        
         
+# ***************** ValvePort_GUI *************************
+
+
+class ValvePort_Kivy(ValvePort):
+    """Kivy GUI display implementation of ValvePort class. Displays the valve action as "lights" on
+     a ChannelLight object. The lights parameter is an array of ChannelLights objects"""
+
+    def __init__(self, channels=24, channelsperbank=6, lights=[]):
+        ValvePort.__init__(self, channels, channelsperbank)
+        self.lights = lights
+        self.num_available = len(self.lights)
+
+    def execute(self):
+        """Display the output of the sequence on a bitmap canvase"""
+        for i in range(0, self.num_channels):
+            if self.execstate[i] != self.channels[i]:
+                if i < self.num_available:
+                    if self.channels[i] > 0:
+                        self.lights[i].on()
+                    else:
+                        self.lights[i].off()
+
+        # set the exec state array
+        ValvePort.execute(self)
+
+
 # ***************** ValvePort_Parallel *************************
 
 

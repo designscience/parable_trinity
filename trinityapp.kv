@@ -18,16 +18,18 @@
         id: activate_button
         text: 'help me'
         size: self.parent.width, self.parent.height
+        on_press: root.app.bulb()
     StackLayout:
         id: light_panel
         canvas.before:
             Color:
-                rgba: 1, 1, 1, 1
+                rgba: 0, 0, 0, 1
             Rectangle:
                 size: self.size
                 pos: self.pos
+        padding: 10, 10
         size_hint: None, None
-        size: '1800px', '100px'
+        size: '1820px', '120px'
         pos_hint: {'center_x': 0.5, 'top': 0.98}
 
 <ChannelLight>:
@@ -39,6 +41,7 @@
             size: self.size
     size_hint: None, None
     size: 100, 100
+    background_normal: 'images/no-flame.png'
     Image:
         id: flame
         source: ''
