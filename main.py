@@ -46,7 +46,7 @@ class TrinityApp(App):
         # Sequence maintenance
         self.sequences = [""] * self.num_buttons  # Sequence name
         self.trigger_times = [0.0] * self.num_buttons  # Sequence name
-        self.seq_directory = "/Users/Stu/Documents/Compression/Sequences/"
+        self.seq_directory = "/Users/Stu/Documents/Compression/Sequences/2014 All/"
         self.music_directory = "/Users/Stu/Documents/Compression/"
         self.show_list_file = "/Users/Stu/Documents/Compression/compression17.show.xml"
         self.test_clip = "blow.mp3"
@@ -349,7 +349,8 @@ class TrinityApp(App):
         print("Exiting program")
         # Kill the media player
         self.player.kill()
-        self.player.join(5)
+        if self.player.is_alive():
+            self.player.join(5)
         # command threads to stop then wait
         if self.tmain.isAlive():
             self.out_queue.put("die")
