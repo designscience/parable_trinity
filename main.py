@@ -1,29 +1,30 @@
 import os
 import kivy
 # import logging
-import sys
+# import sys
 import vlc
 import time
 import threading
 # import Queue
 import multiprocessing
 
-# import paraplayer
+import paraplayer
 import parascreens
 import parclasses
 import parthreads
+import showlist
 
-
+from kivy.clock import Clock
 from kivy.app import App
 # from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.button import Button
-from kivy.clock import Clock
+# from kivy.uix.button import Button
 
 os.environ['KIVY_IMAGE'] = 'pil,sdl2'
 kivy.require('1.10.0')
 __version__ = "1.0.0"
 
 MRL = '/Users/Stu/Documents/Compression/Keith/Keith Emerson Tribute rev1.mp3'
+
 
 class TrinityApp(App):
     def __init__(self):
@@ -39,12 +40,16 @@ class TrinityApp(App):
 
         self.ui = parascreens.UserInterface()
         self.home_screen = None
-        # self.player = paraplayer.ParaPlayer()
+
+        self.player = paraplayer.ParaPlayer()
 
         # Sequence maintenance
         self.sequences = [""] * self.num_buttons  # Sequence name
         self.trigger_times = [0.0] * self.num_buttons  # Sequence name
-        self.seq_directory = "C:\\sequences\\"
+        self.seq_directory = "/Users/Stu/Documents/Compression/Sequences/"
+        self.music_directory = "/Users/Stu/Documents/Compression/"
+        self.show_list_file = "/Users/Stu/Documents/Compression/compression17.show.xml"
+        self.test_clip = "blow.mp3"
 
         # Threading queues
         self.out_queue = multiprocessing.Queue()  # send commands to main thread
@@ -55,10 +60,63 @@ class TrinityApp(App):
 
         # create a channel map for the actual cannons
         self.straight_map = parclasses.ChannelMap(24)  # for straight import mapping
-        for i in range(1, 22):
-            self.straight_map.addMapping(i, i)
+        for i in range(0, 24):
+            self.straight_map.addMapping(i + 1, i + 1)
+        self.straight_map.addMapping(1, 1)
         self.straight_map.addMapping(23, 0)
         self.straight_map.addMapping(24, 0)
+
+        self.effect_map = parclasses.ChannelMap(24)  # for effects channels
+        self.effect_map.addMapping(1,  2)
+        self.effect_map.addMapping(2,  5)
+        self.effect_map.addMapping(3,  8)
+        self.effect_map.addMapping(4, 11)
+        self.effect_map.addMapping(5, 14)
+        self.effect_map.addMapping(6, 17)
+        self.effect_map.addMapping(7,  1)
+        self.effect_map.addMapping(8,  4)
+        self.effect_map.addMapping(9,  7)
+        self.effect_map.addMapping(10, 10)
+        self.effect_map.addMapping(11, 13)
+        self.effect_map.addMapping(12, 16)
+        self.effect_map.addMapping(13,  3)
+        self.effect_map.addMapping(14,  6)
+        self.effect_map.addMapping(15,  9)
+        self.effect_map.addMapping(16, 12)
+        self.effect_map.addMapping(17, 15)
+        self.effect_map.addMapping(18, 18)
+        self.effect_map.addMapping(19, 19)
+        self.effect_map.addMapping(20, 20)
+        self.effect_map.addMapping(21, 21)
+        self.effect_map.addMapping(22, 22)
+        self.effect_map.addMapping(23,  0)
+        self.effect_map.addMapping(24,  0)
+
+        self.graybox_map = parclasses.ChannelMap(24)  # for effects channels
+        self.graybox_map.addMapping(1,  2)
+        self.graybox_map.addMapping(2,  5)
+        self.graybox_map.addMapping(3,  8)
+        self.graybox_map.addMapping(4, 11)
+        self.graybox_map.addMapping(5, 14)
+        self.graybox_map.addMapping(6, 17)
+        self.graybox_map.addMapping(7,  1)
+        self.graybox_map.addMapping(8,  4)
+        self.graybox_map.addMapping(9,  7)
+        self.graybox_map.addMapping(10, 10)
+        self.graybox_map.addMapping(11, 13)
+        self.graybox_map.addMapping(12, 16)
+        self.graybox_map.addMapping(13,  3)
+        self.graybox_map.addMapping(14,  6)
+        self.graybox_map.addMapping(15,  9)
+        self.graybox_map.addMapping(16, 12)
+        self.graybox_map.addMapping(17, 15)
+        self.graybox_map.addMapping(18, 18)
+        self.graybox_map.addMapping(19, 0)
+        self.graybox_map.addMapping(20, 0)
+        self.graybox_map.addMapping(21, 0)
+        self.graybox_map.addMapping(22, 0)
+        self.graybox_map.addMapping(23,  0)
+        self.graybox_map.addMapping(24,  0)
 
         # temp sequence rate scaling factor (playback rate)
         self.scaleFactor = 1.10
@@ -68,7 +126,7 @@ class TrinityApp(App):
         self.seq.name = "Temp Sequence"
 
         # Create the threaded sequence handler (ControlBank)
-        self.cb = parthreads.ControlBank("/Users/Stu/Sequences")
+        self.cb = parthreads.ControlBank(self.seq_directory)
 
         # Uninitiated objects
         self.lights = []  # array of ChannelLight objects for GUI display
@@ -77,19 +135,19 @@ class TrinityApp(App):
         self.vp1 = None  # ValvePort output
         self.vp2 = None  # ValvePort output
         self.vpb = parclasses.ValvePortBank()
+        self.auto_pilot = False  # in case we add auto-pilot at some point
+
+        self.sequences = []  # list of SequenceButton objects (prev seq name)
+        self.sequence_index = 0  # index of loaded sequences (buttons)
+        # NOTE: trigger_times are stored in the SequenceButton object
+
+        # Show list is used to play back music and sequences together
+        self.showlist = showlist.ShowList(self.player, self.out_queue, self.show_list_file)
+
+        self.in_handler = False  # prevent too much recursion into loop handler
 
     def build(self):
         """ Instantiates UI widgets, loads machinery, and returns the root widget """
-        # self.player.set_media(MRL, 1.5)
-        # self.player.set_finish_callback(self.on_completion)
-
-        # self.player.loop(12.0, 14.0, False, self.on_loop)
-        # self.player.play()
-        # time.sleep(4)
-        # self.player.kill()
-        # self.player.join(5)
-        # exit()
-
         # Render the home screen
         self.home_screen = parascreens.HomeScreen(self)
         self.ui.clear_widgets()
@@ -104,11 +162,11 @@ class TrinityApp(App):
 
         # create ValvePort (output) objects
         self.vp1 = parclasses.ValvePort_Kivy(22, 6, self.lights)
-        self.vp1.setMap(self.straight_map)
+        self.vp1.setMap(self.effect_map)
 
         # Other output objects
-        self.vp2 = parclasses.ValvePort_Parallel(24, 6)
-        self.vp2.setMap(self.straight_map)
+        self.vp2 = parclasses.ValvePort_Ethernet(24, 6, '192.168.1.115', 4444, False)
+        self.vp2.setMap(self.graybox_map)
 
         # add output objects to an output bank
         self.vpb.addPort(self.vp1)
@@ -116,7 +174,7 @@ class TrinityApp(App):
         self.vpb.execute()   # show the lights
 
         # Create initial temp sequence
-        li = parclasses.randy(64, 22, 1, 2)
+        li = parclasses.randy(140, 18, 1, 2)
         self.seq.append(li)
         self.seq.sortEvents()
 
@@ -124,12 +182,18 @@ class TrinityApp(App):
         self.ttemp = threading.Thread(target=self.seq, args=(self.temp_ev_queue, self.temp_out_queue))
         self.tmain = threading.Thread(target=self.cb, args=(self.ev_queue, self.out_queue, self.in_queue))
 
-        # TODO: add a Kivy Clock schedule
-        # self.myTimer = timer.Timer(self.components.OutputCanvas1, -1) # create a timer
-        # self.myTimer.Start(5)
-
         # Animate lights then douse them
         self.bulb()
+
+        # start and initialize main thread
+        self.tmain.start()
+        self.out_queue.put("loadbank|")
+
+        # Initiate thread handler
+        print('Attempting to start loop handler')
+        Clock.schedule_once(self.loop_handler, 0)
+        # self.play_temp_seq()
+
         return self.ui
 
     def bulb(self):
@@ -147,14 +211,154 @@ class TrinityApp(App):
             self.countdown += 1
         return self.countdown < self.num_channels
 
-    def cleanup(self):
-        """Clean up threads at program exit"""
-        # self.player.kill()
-        # self.player.join(5)
-        sys.exit(0)
+    def loop_handler(self, dt=None):
+        """Once this is called it will run each frame"""
+        if not self.in_handler:
+            self.in_handler = True
+            while self.ev_queue.empty() is False:
+                ev = self.ev_queue.get()
+                self.vpb.setEventExec(ev)
 
-    def on_completion(self, media_path, time_sig):
-        print("On Completion called with time signature " + str(time_sig) + " for media " + media_path)
+            while self.temp_ev_queue.empty() is False:
+                ev = self.temp_ev_queue.get()
+                self.vpb.setEventExec(ev)
+
+            while self.in_queue.empty() is False:
+                self.process_thread_command(self.in_queue.get())
+
+            Clock.schedule_once(self.loop_handler, 0)  # call this on next frame
+            self.in_handler = False
+
+    def process_thread_command(self, cmdstr):
+        """ process incoming commands from the main thread """
+        # print(">>> " + cmdstr)
+        cmd = cmdstr.split("|")
+
+        # kill - kill the cannons
+        if cmd[0] == "kill":
+            self.vpb.reset()
+            # running - color button to indicate running status
+        elif cmd[0] == "started":
+            for button in self.sequences:
+                if button.sequence_name == cmd[1]:
+                    button.show_running()
+                    # self.components[btn].backgroundColor = (255, 0, 0, 255)
+                    # self.components[btn].foregroundColor = (255, 255, 255, 255)
+                    break
+            # if (self.auto_pilot == True):
+            #     self.auto_pilot_triggered = True;  # don't play another seq until done
+
+        # stopped - color button to indicate stopped status
+        elif cmd[0] == "stopped":
+            for button in self.sequences:
+                if button.sequence_name == cmd[1]:
+                    button.show_stopped()
+                    break
+            # if self.auto_pilot is True:
+            #     self.arm_auto_pilot();  # sequence done, start another one
+        # clearbank - hide sequence buttons
+        elif cmd[0] == "clearbank":
+            for button in self.sequences:
+                self.ui.ids.sequence_panel.remove_widget(button)
+                self.sequences.remove(button)
+                del button
+            self.sequences = []
+            self.sequence_index = 0  # TODO: is sequence_index still needed
+        # newseq - add a new sequence
+        elif cmd[0] == "newseq":
+            if self.sequence_index < self.num_buttons:
+                new_button = parascreens.SequenceButton(cmd[1], self)
+                self.sequences.append(new_button)
+                self.home_screen.ids['sequence_panel'].add_widget(new_button)
+                self.sequence_index += 1  # TODO: is sequence_index needed any more?
+        # beat- toggle beat light
+        elif cmd[0] == "beat":  # toggle the state of the beat light
+            # TODO: create a beat light element and call toggle()
+            # self.components.ImageButton1.visible = \
+            #     not self.components.ImageButton1.visible and \
+            #     self.components.chkUseBeat.checked
+            pass
+        # beaton - turn on beat light
+        elif cmd[0] == "beaton":
+            # TODO: Add use beat checkbox or toggle button (better)
+            # if self.components.chkUseBeat.checked:
+            #     self.components.ImageButton1.visible = True
+            # else:
+            #     self.components.ImageButton1.visible = False  # always off
+            pass
+        # beatoff - turn off beat light
+        elif cmd[0] == "beatoff":
+            # TODO: extinguish beat light
+            # self.components.ImageButton1.visible = False
+            pass
+        # exception - report exception
+        elif cmd[0] == "exception":
+            self.title = "Exception: " + cmd[1]
+
+    def seq_btn_down(self, button: parascreens.SequenceButton):
+        """ This is called on the down click of all sequence buttons.
+            it toggles the sequence state (toggle handled in ControlBank) """
+        if self.auto_pilot is False:
+            # print("toggle|" + self.sequences[event.target.id])
+            self.out_queue.put("toggle|" + button.sequence_name)
+            button.trigger_time = time.time()
+
+    def seq_btn_up(self, button: parascreens.SequenceButton):
+        """ Depending on how long the button was pressed, either stop the sequence or does nothing """
+        if self.auto_pilot is False:
+            if time.time() - button.trigger_time > 0.2:
+                # print("stop|" + self.sequences[event.target.id])
+                self.out_queue.put("stop|" + button.sequence_name)
+
+    def fire_channel(self, channel_number):
+        """Takes a channel numnber and fires that channel. NO OFF! Must use Kill"""
+        print('Firing channel {} manually'.format(channel_number))
+        self.vp2.setChannelExec(int(channel_number), 1)
+
+    def play_temp_seq(self):
+        """Plays the temp sequence that is initialized with a randy sequence"""
+        if self.ttemp.isAlive() is True:
+            self.temp_out_queue.put("stop")
+        else:
+            # self.seq.scaleToBeat(parclasses.TimeCode(15))
+            while self.temp_out_queue.empty() is False:
+                self.temp_out_queue.get()
+
+            # destroy the temp thread and recreate
+            # "you can't stop a thread object and restart it. Don't try"
+            del self.ttemp
+            self.ttemp = threading.Thread(target=self.seq, args=(self.temp_ev_queue,self.temp_out_queue))
+            self.ttemp.start()
+
+    def stop_temp_seq(self):
+        """Stop playback of the temp sequence"""
+        if self.ttemp.isAlive() is True:
+            self.temp_out_queue.put("stop")
+
+    def start_the_show(self):
+        if self.showlist:
+            self.showlist.start()
+
+    def stop_the_music(self):
+        if self.player:
+            print("playback stopped at {}".format(self.player.get_time()))
+            self.player.stop()
+
+    def on_stop(self):
+        """Kivy function - stopping the application"""
+        print("Exiting program")
+        # Kill the media player
+        self.player.kill()
+        self.player.join(5)
+        # command threads to stop then wait
+        if self.tmain.isAlive():
+            self.out_queue.put("die")
+            self.tmain.join()  # wait for thread to finish
+        if self.ttemp.isAlive():
+            self.temp_out_queue.put("die")
+            self.ttemp.join()  # wait for thread to finish
+
+    # ~~~~~~~~~~~~~~~~~ these functions are written for the pyplayer class ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def on_loop(self, media_path, time_sig):
         print("On Loop called with time signature " + str(time_sig) + " for media " + media_path)

@@ -30,6 +30,7 @@ import parallel
 import operator
 import time
 import random
+import socket
 # import os
 # import sys
 # import threading
@@ -126,6 +127,21 @@ class TimeCode(object):
                 return 0
         else:
             return False  # not a matching type
+
+    def __lt__(self, other):
+        return self.total_frames < other.total_frames
+
+    def __gt__(self, other):
+        return self.total_frames > other.total_frames
+
+    def __eq__(self, other):
+        return self.total_frames == other.total_frames
+
+    def __le__(self, other):
+        return self.total_frames <= other.total_frames
+
+    def __ge__(self, other):
+        return self.total_frames >= other.total_frames
 
     def __str__(self):
         return self.SMPTE()
@@ -325,6 +341,15 @@ class ControlEvent(object):
 
     __repr__ = __str__
 
+    def __lt__(self, other):
+        return self.time < other.time
+
+    def __gt__(self, other):
+        return self.time > other.time
+
+    def __eq__(self, other):
+        return self.time == other.time
+
     def getXML(self, indent=0):
         """Returns an XML element as a string; indent param inserts tabs"""
         ind1 = "    " * indent
@@ -405,7 +430,7 @@ class ControlEvent(object):
 
 class ControlList(object):
     """Maintains a list of ControlEvents used to trigger event actions
-    Items added to teh list are set to the default channel and level for
+    Items added to the list are set to the default channel and level for
     this list, unless those are set to 0 (default)"""
 
     def __init__(self, initializer=None, level=0, channel=0, name=""):
@@ -938,7 +963,7 @@ class ControlList(object):
             tree = ET.parse(file_path)
         except Exception as e:
             # TODO: make below log to a logger file
-            print("Not a valid ControlList XML file")
+            print("Not a valid ControlList XML file: {0}".format(e))
             return
 
         root = tree.getroot()
@@ -1196,67 +1221,6 @@ class ValvePort_Parallel(ValvePort):
         self.reset();
         """
 
-    """
-    def setChannel(self, channel, value):
-        #Sets a channel to OFF (value=0) or ON (value=non-0).
-        #   Increments a count with each "ON".  Decrements with
-        #   each "OFF".  Use execute() to write the changes to the
-        #   channels
-        if self.channel_map is not None:
-            channel = self.channel_map.lookup(channel)
-
-        if channel > 0 and channel <= self.num_channels:
-            if value > 0:
-                self.channels[channel-1] += 1
-            else:
-                self.channels[channel-1] -= 1 
-                if self.channels[channel-1] < 0:
-                    self.channels[channel-1] = 0
-            return True
-        else:
-            return False
-    """
-
-    """
-    def setEvent(self, event):
-        #Set a channel by a ControlEvent event. Maintains
-        #    a count which would 
-        if isinstance(event, ControlEvent):
-            if self.channel_map is not None:
-                channel = self.channel_map.lookup(event.channel)
-            else:
-                channel = event.channel
-
-            if channel > 0 and channel <= self.num_channels:
-                if event.action == "on":
-                    self.channels[channel-1] += 1 
-                else:
-                    self.channels[channel-1] -= 1 
-                    if self.channels[channel-1] < 0:
-                        self.channels[channel-1] = 0
-                return True
-            else:
-                return False
-    """
-    """
-    def oneChannel(self, channel, value=1):
-        #Sets ONE channel ON (default), all others off
-        #   Use execute() to write the changes to the channels
-        if self.channel_map is not None:
-            channel = self.channel_map.lookup(channel)
-
-        #set all channels to OFF
-        for i in range(0, self.num_channels):
-            self.channels[i]=0
-
-        # Set this channel to VALUE
-        if channel > 0 or channel <= self.num_channels:
-            self.channels[channel-1]=value
-            return True
-        else:
-            return False
-    """
-
     def execute(self):
         """Write the current (internal) state of the channels
             to the channels themselves.  Use setChannel() or
@@ -1287,55 +1251,92 @@ class ValvePort_Parallel(ValvePort):
         
         # FUTURE: update the prev_channels array to keep track of changes
 
-    """
-    def reset(self):
-        #Clears all channels and sends to the hardware
-        #set all channels to OFF
-        for i in range(0, self.num_channels):
-            self.channels[i]=0
 
-        self.execute()
-    """
+# *********************** ValvePort_Ethernet ***********************
 
-    """
-    def all_on(self):
-        #Sets all channels on and writes to the hardware
-        #set all channels to ON
-        for i in range(0, self.num_channels):
-            self.channels[i]=1
 
-        self.execute()
-    """
-    """
-    def setChannelExec(self, channel, value):
-        #Changes the state of one channel and sends the change
-        #   immediately to the channel device
-        if (self.setChannel(channel, value)):
-            self.execute()
-            return True
+class ValvePort_Ethernet(ValvePort):
+    def __init__(self, channels=24, channelsperbank=6, remote_addr='127.0.0.1', remote_port=4444, verbose=False):
+        ValvePort.__init__(self, channels, channelsperbank)
+        self.host = remote_addr
+        self.port = remote_port
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.is_connected = False
+        self.verbose = verbose
+        self.connect()
+
+    def __del__(self):
+        """Clean up socket"""
+        self.sock.shutdown()
+        self.sock.close()
+
+    def connect(self):
+        """Connect to the sockect"""
+        if not self.is_connected:
+            try:
+                self.sock.settimeout(2.0)
+                self.sock.connect((self.host, self.port))
+                self.is_connected = True
+            except InterruptedError:
+                print('The socket connection was interrupted')
+                self.is_connected = False
+            except socket.timeout:
+                print('Timed out waiting for a socket connection to {0}:{1}'.format(self.host, self.port))
+                self.is_connected = False
+            except:
+                print('An unknown error occured while attempting a socket connection to {0}:{1}'
+                      .format(self.host, self.port))
+                self.is_connected = False
+
+        return self.is_connected
+
+    def send(self, message):
+        """Sends a message to the remote"""
+        if self.connect():
+            try:
+                self.sock.send(message.encode('ascii'))
+            except BrokenPipeError:
+                print('Connection was broken, attempting to re-establish')
+                self.reset_socket()
+                if self.connect():
+                    self.sock.send(message.encode('ascii'))
+                else:
+                    print('Unable to re-establish connection. Will try again on next send')
+
+    def reset_socket(self):
+        """If communication fails build a new socket"""
+        self.sock.close()
+        self.is_connected = False
+        del self.sock
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    def execute(self, bank_mode=False):
+        """Update the remote device (Puff or other) with channel changes"""
+        if bank_mode:
+            cmnd = '$bnx:1|{}'.format(self.num_channels)
+            for i in range(0, self.num_channels):
+                cmnd += ':{}'.format('1' if self.channels[i] > 0 else '0')
+            cmnd += '#'
+            self.send(cmnd)
+            if self.verbose:
+                print('Sending command: {}'.format(cmnd))
         else:
-            return False
-    """
-    """
-    def setEventExec(self, event):
-        #Changes the state of one channel and sends the change
-        #    immediately to the channel device
-        if(self.setEvent(event)):
-            self.execute()
-            return True
-        else:
-            return False
-    """
-    """
-    def oneChannelExec(self, channel, value=1):
-        #Changes the state of one channel clearing all others
-        #    immediately to the channel device
-        if (self.oneChannel(channel, value)):
-            self.execute()
-            return True
-        else:
-            return False
-    """
+            # Send individual channel commands
+            for i in range(0, self.num_channels):
+                if self.execstate[i] != self.channels[i]:
+                    chnl = i + 1
+                    cmnd = '$chx:1|{0}:'.format(chnl)
+                    if self.channels[i] > 0:
+                        cmnd += '1#'
+                    else:
+                        cmnd += '0#'
+
+                    self.send(cmnd)
+                    if self.verbose:
+                        print('Sending command: {}'.format(cmnd))
+
+        # set the exec state array
+        ValvePort.execute(self)
 
 
 # *********************** ValvePortBank ****************************
@@ -1445,7 +1446,7 @@ def beep(chanl, duration=12, pause=0, start_time=0, level=0, sequence=0):
     cl.sortEvents()
     return cl
 
-def randy(iterations, num_channels=12, beep_dur=3, per=2, level=0, sequence=0):
+def randy(iterations, num_channels=18, beep_dur=3, per=2, level=0, sequence=0):
     """randomly fires the cannons"""
     cl = ControlList()
     start = 0

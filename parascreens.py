@@ -3,14 +3,16 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.widget import Widget
 from kivy.uix.button import Button
+from kivy.app import App
+from kivy.core.window import Window
 from kivy.uix.image import Image
 # from kivy.properties import ListProperty, NumericProperty, ReferenceListProperty, ObjectProperty
 # from kivy.config import Config
 # from kivy.graphics import Canvas
 # from kivy.uix.label import Label
-from kivy.animation import Animation
+# from kivy.animation import Animation
 # import logging
-import time
+# import time
 
 
 class UserInterface(FloatLayout):
@@ -21,7 +23,27 @@ class HomeScreen(FloatLayout):
     def __init__(self, main_app):
         self.app = main_app
         self.test_me = False
+        # self._keyboard = Window.request_keyboard(self._keyboard_closed, self)
+        # self._keyboard.bind(on_key_down=self._on_keyboard_down)
         super(FloatLayout, self).__init__()
+
+    def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
+        """Handle key presses"""
+        try:
+            val = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].index(int(keycode[1])) + 1
+            if val == 0:
+                val = 10
+            self.app.fire_channel(val)
+            return True
+        except:
+            pass
+        print('keycode ({}, {}) received'.format(keycode[0], keycode[1]))
+        return True
+
+    def _keyboard_closed(self):
+        """Close keyboard object"""
+        self._keyboard.unbind(on_key_down=self._on_keyboard_down)
+        self._keyboard = None
 
     def clear(self):
         self.ids.light_panel.clear_widgets()
@@ -47,4 +69,22 @@ class ChannelLight(RelativeLayout):
 
     def off(self):
         self.ids.flame.source = self.off_source
+
+
+class SequenceButton(Button):
+    def __init__(self, sequence_name, app: App):
+        """A button with which to control a sequence"""
+        super(Button, self).__init__()
+        self.trigger_time = 0.0
+        self.sequence_name = sequence_name
+        self.text = sequence_name
+        self.app = app
+
+    def show_running(self):
+        self.background_color = [1, 1, 1, 1]
+        self.color = [0, 0, 0, 1]
+
+    def show_stopped(self):
+        self.background_color = [0.3, 0.3, 0.3, 1]
+        self.color = [1, 1, 1, 1]
 

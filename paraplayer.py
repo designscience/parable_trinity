@@ -18,6 +18,7 @@ class ParaPlayer(threading.Thread):
         self.is_active = False  # Thread is active. Set false to kill thread.
         self.is_playing = False  # Something is playing, possibly silence
 
+        self.start_callback_armed = False  # arm start callback until player loads and starts
         self.start_callback = None
         self.finish_callback = None
         self.interval_callback = None
@@ -45,15 +46,15 @@ class ParaPlayer(threading.Thread):
 
     def run(self):
         """Initializes the thread but does not actually play media"""
+        # CRITICAL: call this repeatedly from the program loop, remove loop and sleep. I think, right?
         print("Entering media thread")
         self.is_active = True
         while self._stop_thread.is_set() is False or self.player.is_playing() is True:
-            # while self.is_active is True or self.player.is_playing() is True:
-            # while self.is_active is True:
-            self._check_playback()
-            self._check_interval()
-            print('hi there')
-            time.sleep(.3)
+            while self.is_active is True or self.player.is_playing() is True:
+                # while self.is_active is True:
+                self._check_playback()
+                self._check_interval()
+                time.sleep(.1)
         print("Leaving media thread")
 
     def kill(self):
@@ -93,7 +94,10 @@ class ParaPlayer(threading.Thread):
             self.is_playing = True
             # Call start callback
             if self.start_callback is not None:
-                self.start_callback(self.media_path, self.get_time())
+                if self.media_path is not None:
+                    self.start_callback_armed = True
+                else:
+                    self.start_callback(self.media_path, self.get_time())
 
     def pause(self):
         """Pause playback and keep track of time signatures"""
@@ -160,6 +164,13 @@ class ParaPlayer(threading.Thread):
             if self.is_active is False:
                 ptime = self._halt_playback()
             else:
+                # Check the player time to fire armed callback
+                if self.media_path is not None and self.start_callback_armed:
+                    ptime = self.get_time()
+                    if ptime > 0.0:
+                        self.start_callback(self.media_path, ptime)
+                        self.start_callback_armed = False
+
                 # Check whether playback length is set and exceeded
                 if float(self.playback_length) > 0.0:
                     if self.get_time() >= self.playback_length:

@@ -8,17 +8,17 @@
     id: home_screen
     canvas.before:
         Color:
-            rgba: 1, 1, 1, 1
+            rgba: 0, 0, 0, 1
         Rectangle:
             size: self.size
             pos: self.pos
     Button:
         size_hint: 0.2, 0.1
-        pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+        pos_hint: {'center_x': 0.5, 'y': 0.02}
         id: activate_button
-        text: 'help me'
+        text: 'play show'
         size: self.parent.width, self.parent.height
-        on_press: root.app.bulb()
+        on_press: root.app.start_the_show()
     StackLayout:
         id: light_panel
         canvas.before:
@@ -31,6 +31,21 @@
         size_hint: None, None
         size: '1820px', '120px'
         pos_hint: {'center_x': 0.5, 'top': 0.98}
+    StackLayout:
+        id: sequence_panel
+        canvas.before:
+            Color:
+                rgba: 0, 0, 0, 1
+            Rectangle:
+                size: self.size
+                pos: self.pos
+        padding: 10, 10
+        spacing: 20
+        size_hint: 0.98, 0.4
+        pos_hint: {'center_x': 0.5}
+#        center_x: self.parent.width * 0.5
+        y: self.parent.height * 0.98 - light_panel.height - 20 - self.height
+
 
 <ChannelLight>:
     canvas.before:
@@ -47,7 +62,12 @@
         source: ''
         left: 0
 
-
-
-
-
+<SequenceButton>:
+    text: ''
+    size_hint: None, None
+    height: '130px'
+    width: '290px'
+    color: 1, 1, 1, 1
+    background_color: 0.3, 0.3, 0.3, 1
+    on_press: self.app.seq_btn_down(self)
+    on_release: self.app.seq_btn_up(self)
