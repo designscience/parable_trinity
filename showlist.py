@@ -28,7 +28,8 @@ class ShowList(object):
         self.current_index = 0
         self.start_time = 0.0
         self.paused_at = 0.0
-        self.locked = False
+        self.locked = False  # Don't allow the show to be paused or stopped
+        self.show_paused = False  # this means that a stop event was encountered
 
         self.player.set_start_callback(self.on_start)
         self.player.set_finish_callback(self.on_completion)
@@ -90,25 +91,38 @@ class ShowList(object):
         """Starts playing the show"""
         ev = self.current_event()
         if ev is not None:
-            media_path = self.music_root + ev.source if ev.source != '' else None
-            self.player.set_media(media_path, ev.duration)
-            self.player.play()
+            if ev.type == 'stop':
+                # no playback initiated so we'll wait until start() is called again
+                self.show_paused = True
+                self.current_index += 1
+                print("Show playback intentionally stopped, press PLAY to resume")
+            else:
+                media_path = self.music_root + ev.source if ev.source != '' else None
+                self.player.set_media(media_path, ev.duration)
+                self.player.play()
+
+    def resume(self):
+        """An alias - easier to remember for external control after a show pause"""
+        self.play_next()
 
     def play_next(self):
         """Plays the next event if one exists"""
+        self.show_paused = False
         self.current_index += 1
         if self.current_index < len(self.events):
             self.play()
         else:
+            # end of show
             self.locked = False
 
     def on_completion(self, media_path, time_sig):
         # TODO: need to determine if the sequence is longer than the music. Rare, but possible.
-        if media_path:
-            print("On Completion called with time signature " + str(time_sig) + " for media " + media_path)
-        else:
-            print("On Completion called after pause at " + str(time_sig))
-        self.play_next()
+        if not self.show_paused:
+            if media_path:
+                print("On Completion called with time signature " + str(time_sig) + " for media " + media_path)
+            else:
+                print("On Completion called after pause at " + str(time_sig))
+            self.play_next()
 
     def on_start(self, media_path, time_sig):
         """Used here to trigger the start of the sequence"""

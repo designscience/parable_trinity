@@ -18,13 +18,13 @@ from kivy.clock import Clock
 from kivy.app import App
 # from kivy.uix.floatlayout import FloatLayout
 # from kivy.uix.button import Button
+from kivy.uix.togglebutton import ToggleButton
 
 os.environ['KIVY_IMAGE'] = 'pil,sdl2'
 kivy.require('1.10.0')
 __version__ = "1.0.0"
 
 MRL = '/Users/Stu/Documents/Compression/Keith/Keith Emerson Tribute rev1.mp3'
-
 
 class TrinityApp(App):
     def __init__(self):
@@ -47,9 +47,8 @@ class TrinityApp(App):
         self.sequences = [""] * self.num_buttons  # Sequence name
         self.trigger_times = [0.0] * self.num_buttons  # Sequence name
         self.seq_directory = "/Users/Stu/Documents/Compression/Sequences/2014 All/"
-        self.music_directory = "/Users/Stu/Documents/Compression/"
-        self.show_list_file = "/Users/Stu/Documents/Compression/compression17.show.xml"
-        self.test_clip = "blow.mp3"
+        self.music_directory = "/Users/Stu/Documents/Compression/Music/"
+        self.show_list_file = "/Users/Stu/Documents/Compression/compression.show.xml"
 
         # Threading queues
         self.out_queue = multiprocessing.Queue()  # send commands to main thread
@@ -280,17 +279,13 @@ class TrinityApp(App):
             pass
         # beaton - turn on beat light
         elif cmd[0] == "beaton":
-            # TODO: Add use beat checkbox or toggle button (better)
-            # if self.components.chkUseBeat.checked:
-            #     self.components.ImageButton1.visible = True
-            # else:
-            #     self.components.ImageButton1.visible = False  # always off
-            pass
+            if self.home_screen.ids.use_beat.state == 'down':
+                self.home_screen.ids.beat_light.opacity = 1.0
+            else:
+                self.home_screen.ids.beat_light.opacity = 0.0
         # beatoff - turn off beat light
         elif cmd[0] == "beatoff":
-            # TODO: extinguish beat light
-            # self.components.ImageButton1.visible = False
-            pass
+            self.home_screen.ids.beat_light.opacity = 0.0
         # exception - report exception
         elif cmd[0] == "exception":
             self.title = "Exception: " + cmd[1]
@@ -314,6 +309,20 @@ class TrinityApp(App):
         """Takes a channel numnber and fires that channel. NO OFF! Must use Kill"""
         print('Firing channel {} manually'.format(channel_number))
         self.vp2.setChannelExec(int(channel_number), 1)
+
+    def on_use_beat(self, toggle: ToggleButton):
+        """Depending on the state of the button, use the tap beat or not"""
+        if toggle.state == 'down':
+            self.out_queue.put("usebeat|yes")
+        else:
+            self.out_queue.put("usebeat|no")
+
+    def on_tap_press(self):
+        """ process a tap beat to keep time with music """
+        self.out_queue.put("tap|" + str(time.time()))
+        if self.home_screen.ids.use_beat.state == 'normal':
+            self.home_screen.ids.use_beat.state = 'down'
+            # self.out_queue.put("usebeat|yes")
 
     def play_temp_seq(self):
         """Plays the temp sequence that is initialized with a randy sequence"""

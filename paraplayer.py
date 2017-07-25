@@ -47,6 +47,7 @@ class ParaPlayer(threading.Thread):
     def run(self):
         """Initializes the thread but does not actually play media"""
         # CRITICAL: call this repeatedly from the program loop, remove loop and sleep. I think, right?
+        # CONSIDER: actually, maybe not, if the program loop halts it may result in less than perfect operation. TBD!!!
         print("Entering media thread")
         self.is_active = True
         while self._stop_thread.is_set() is False or self.player.is_playing() is True:
@@ -54,7 +55,7 @@ class ParaPlayer(threading.Thread):
                 # while self.is_active is True:
                 self._check_playback()
                 self._check_interval()
-                time.sleep(.1)
+                time.sleep(.3)
         print("Leaving media thread")
 
     def kill(self):
@@ -114,6 +115,10 @@ class ParaPlayer(threading.Thread):
         self.loop_start = 0.0
         self.start_time = 0.0
         self.pause_time = 0.0
+
+    def rewind(self):
+        """Set the player to the start of the media or to the start of the loop"""
+        self.player.set_time(self.loop_start)  # should be 0.0 if we're not looping
 
     def get_time(self):
         """Returns the current time of playback"""

@@ -45,6 +45,43 @@
         pos_hint: {'center_x': 0.5}
 #        center_x: self.parent.width * 0.5
         y: self.parent.height * 0.98 - light_panel.height - 20 - self.height
+    FloatLayout:
+        id: sync_controls
+        size_hint: 0.3, 0.08
+#        pos_hint: 0, 0.01
+#        canvas.before:
+#            Color:
+#                rgba: .1, .1, .1, 1
+#            Rectangle:
+#                size: self.size
+#                pos: self.pos
+        Image:
+            id: beat_light
+            x: 20
+            top: 124
+            source: 'images/svp_100.jpg'
+            size_hint: None, None
+            size: '100px', '94px'
+        Button:
+            id: tap_beat
+            size_hint: None, None
+            text: 'TAP'
+            size: '280px', '120px'
+            top: 130
+            x: 164
+            background_color: .6, .6, .6, 1
+            on_press: root.app.on_tap_press()
+        ToggleButton:
+            id: use_beat
+            size_hint: None, None
+            text: 'Use Beat'
+            size: '180px', '80px'
+            top: 110
+            x: 500
+            background_color: .4, .4, .4, 1
+            on_state: root.app.on_use_beat(self)
+
+
 
 
 <ChannelLight>:
