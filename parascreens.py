@@ -91,11 +91,12 @@ class SequenceButton(Button):
 
 
 class ShowListItem(BoxLayout):
-    def __init__(self, item_index, item_type, media_file):
+    def __init__(self, app, item_index, item_type, media_file):
         super(BoxLayout, self).__init__()
         self.item_index = item_index
         self.ids.item_type.text = item_type
         self.ids.media_file.text = media_file
+        self.app = app
 
     def set_active(self):
         pass

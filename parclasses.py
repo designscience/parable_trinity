@@ -25,7 +25,7 @@ Version 3.0 - Python 3 & Trinity 7/2017
 
 ***************************************************** """
 
-# from __future__ import division << @@@ SD'A ommitted 2017
+# from __future__ import division
 from math import fabs
 import parallel
 import operator
@@ -34,7 +34,7 @@ import random
 import socket
 import os.path
 # import sys
-# import threading
+import threading
 # from multiprocessing import Queue
 import xml.etree.ElementTree as ET  # XML support
 import paraplayer
@@ -490,15 +490,19 @@ class ControlList(object):
 
     def __call__(self, out_queue, in_queue):
         print("entering thread")
+        lock = threading.Lock()
         self.start()
         while not self.atEnd():
+            lock.acquire()
             ev = self.getNextByTime()
             if isinstance(ev, ControlEvent):
                 out_queue.put(ev)
+            lock.release()
 
             # read any sent commands
             while not in_queue.empty():
                 cmd = in_queue.get()
+                lock.acquire()
                 if cmd == "stop":
                     print("stopping")
                     self.stop()
@@ -509,7 +513,8 @@ class ControlList(object):
                     break
                 else:
                     print("unknown cmd")
-                    
+                lock.release()
+
         print("leaving thread")
                 
     def addEvent(self, newEvent):
@@ -1353,7 +1358,6 @@ class ValvePort_Recorder(ValvePort):
      to the same media file will attempt to reload the .temp.seqx file, making it the top-level layer and allowing the
      work to continue."""
     def __init__(self, channels=24, channelsperbank=6, media_path='./'):
-        ValvePort.__init__(self, channels, channelsperbank)
         self.player = paraplayer.ParaPlayer()
         self.layers = []  # list of ControlList objects
         self.current_layer = 0  # Index of layer staged for recording
@@ -1366,24 +1370,24 @@ class ValvePort_Recorder(ValvePort):
 
         self.player.set_start_callback(self.on_start)
         self.player.set_finish_callback(self.on_completion)
+        ValvePort.__init__(self, channels, channelsperbank)
 
     def __del__(self):
-        """Clean up socket"""
         self.player.kill()
 
-    def set_media(self, media_file, media_path=None):
+    def set_media(self, media_file, duration=0, media_path=None):
         """Loads media into the player"""
         self.player.stop()
         self._init_layers()
         self.media_file = media_file
         if media_path is not None:
             self.media_path = media_path  # Path to music files
-        self.player.set_media(self.media_path + self.media_file)
+        self.player.set_media(self.media_path + self.media_file, duration)
 
         # Load .temp.seqx file here as top layer (if exists)
         path = './recordings/{}.temp.seqx'.format(self.media_file)
         if os.path.isfile(path):
-            self.layers[self.current_layer].loadFromXML(path)
+            self.layers[self.current_layer].loadXML(path)
 
     def on_start(self, media, media_time):
         """Called when the media begins playing, signalling start of recording """
@@ -1394,8 +1398,10 @@ class ValvePort_Recorder(ValvePort):
         # Compare the local time to the media time sent and set an adjusting offset in the ControlList
         rtime = time.time() - self.recording_start
         # CRITICAL: test this!
-        if fabs(rtime - media_time) > (1000 / 15):
-            self.layers[self.current_layer].offsetTime((media_time - rtime) / 33.3333)  # offset time is in frames
+        # if fabs(rtime - media_time) > (1000 / 15):
+        #     self.layers[self.current_layer].offsetTime((media_time - rtime) / 33.3333)  # offset time is in frames
+        # CRiticAL: remove this
+        self.commit()
         self.recording_start = 0.0  # no longer recording
 
     def record(self):
@@ -1404,7 +1410,7 @@ class ValvePort_Recorder(ValvePort):
             self.recording_start = time.time()
             self.player.play()
         else:
-            raise RuntimeError('ValvePort_Recorder: Attempt to record to a previously recorded layer.')
+            raise RuntimeError('ValvePort_Recorder: Attempt to record to a previously recorded1 layer.')
 
     def stop(self):
         """Stops the recording and returns true if the layer has been recorded (needs accept/reject)"""
@@ -1420,14 +1426,13 @@ class ValvePort_Recorder(ValvePort):
 
     def commit(self):
         """Combines all ControlList files and writes them to the disk"""
-        final = ControlList()
-        for layer in self.layers:
-            final.overlay(layer)
-        final.sortEvents()
-        final.saveXML('./recordings/{}.temp.seqx'.format(self.media_file))
-        self.layers = []
-        self.layers.append = ControlList()
-        self.current_layer = 0
+        if len(self.layers) > 1 or (len(self.layers) > 0 and self.layer_recorded is True):
+            final = ControlList()
+            for layer in self.layers:
+                final.overlay(layer)
+            final.sortEvents()
+            final.saveXML('./recordings/{}.temp.seqx'.format(self.media_file))
+        self._init_layers()
 
     def reject(self):
         """Discard the current layer (if dirty) and rewind the player"""
@@ -1445,16 +1450,21 @@ class ValvePort_Recorder(ValvePort):
 
     def execute(self, bank_mode=False):
         """Records any channel state changes to the current ControlList (layer)"""
+        now = None
+        current_layer = None
         if self.recording_start > 0.0:  # only if we are recording
             for i in range(0, self.num_channels):
                 if self.execstate[i] != self.channels[i]:
-                    self.layer_recorded = True  # dirty flag for this layer
+                    if now is None:
+                        now = self.current_time_in_frames()
+                        self.layer_recorded = True  # dirty flag for this layer
+                        current_layer = self.layers[self.current_layer]
                     event = ControlEvent()
                     if self.channels[i] > 0:
-                        event.setValues(self.current_time_in_frames(), 0, i + 1, 'on')
+                        event.setValues(now, 0, i + 1, 'on')
                     else:
-                        event.setValues(self.current_time_in_frames(), 0, i + 1, 'off')
-                    self.layers[self.current_layer].addEvent(event)
+                        event.setValues(now, 0, i + 1, 'off')
+                    current_layer.addEvent(event)
 
         # set the exec state array (keep track of state even if not recording)
         ValvePort.execute(self)
@@ -1465,9 +1475,9 @@ class ValvePort_Recorder(ValvePort):
             for layer in self.layers:
                 del layer
             self.layers.clear()
-            self.layers.append(ControlList())
-            self.current_layer = 0
-            self.recording_start = 0.0  # by def we're not recording
+        self.layers.append(ControlList())
+        self.current_layer = 0
+        self.recording_start = 0.0  # by def we're not recording
 
 
 # *********************** ValvePortBank ****************************
@@ -1576,6 +1586,7 @@ def beep(chanl, duration=12, pause=0, start_time=0, level=0, sequence=0):
 
     cl.sortEvents()
     return cl
+
 
 def randy(iterations, num_channels=18, beep_dur=3, per=2, level=0, sequence=0):
     """randomly fires the cannons"""

@@ -59,6 +59,13 @@ class ShowList(object):
             for ev in ev_list:
                 self.events.append(ShowListEvent(ev))
 
+    def get_event(self, item_index):
+        """Returns the item at index of None"""
+        if item_index < len(self.events):
+            return self.events[item_index]
+        else:
+            return None
+
     def cancel(self):
         """Cancels playback of this show and resets event index"""
         self.stop()

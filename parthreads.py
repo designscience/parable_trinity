@@ -24,6 +24,7 @@ import os
 import time
 import parclasses
 import beatnik
+import threading
 # import wx
 
 
@@ -57,6 +58,8 @@ class ControlBank(object):
         """ called as a target of a threaded.Thread object, this will
             run the sequencing functions, communicating through the queues """
 
+        lock = threading.Lock()
+
         running = True
         self.in_q = in_queue  # command received from the main thread
         self.out_q = out_queue  # responses, commands to the main thread
@@ -72,17 +75,24 @@ class ControlBank(object):
         # run thread loop
         while running is True:
             if self.die_pending is False:
+                lock.acquire()
                 self.sendPendingEvents()
+                lock.release()
+
+                lock.acquire()
                 self.processCommands()
+                lock.release()
 
                 # display beat light on UI
                 light = self.btic.BeatLight()
                 if light != self.light_state:
+                    lock.acquire()
                     self.light_state = light
                     if light is True:
                         self.out_q.put("beatoff")
                     else:
                         self.out_q.put("beaton")
+                    lock.release()
                     # wx.WakeUpIdle()
                 
                 if self.allClear() is True:

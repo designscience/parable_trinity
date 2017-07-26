@@ -46,6 +46,7 @@ class TrinityApp(App):
         # Sequence maintenance
         self.sequences = [""] * self.num_buttons  # Sequence name
         self.trigger_times = [0.0] * self.num_buttons  # Sequence name
+        self.remote_addr = '192.32.12.3'
         self.seq_directory = "/Users/Stu/Documents/Compression/Sequences/2014 All/"
         self.music_directory = "/Users/Stu/Documents/Compression/Music/"
         self.show_list_file = "/Users/Stu/Documents/Compression/compression.show.xml"
@@ -133,6 +134,7 @@ class TrinityApp(App):
         self.tmain = None  # Sequence thread
         self.vp1 = None  # ValvePort output
         self.vp2 = None  # ValvePort output
+        self.vp3 = None
         self.vpb = parclasses.ValvePortBank()
         self.auto_pilot = False  # in case we add auto-pilot at some point
 
@@ -165,12 +167,18 @@ class TrinityApp(App):
         self.vp1.setMap(self.effect_map)
 
         # Other output objects
-        self.vp2 = parclasses.ValvePort_Ethernet(24, 6, '192.168.1.115', 4444, False)
+        # TODO: address and port from command line arguments or from config file
+        self.vp2 = parclasses.ValvePort_Ethernet(24, 6, self.remote_addr, 4444, False)
         self.vp2.setMap(self.graybox_map)
+
+        # Recorder object
+        # self.vp3 = parclasses.ValvePort_Recorder(24, 6, self.music_directory) # CRITICAL: uncomment this
+        # self.vp3.setMap(self.straight_map)  # CRITICAL: uncomment this
 
         # add output objects to an output bank
         self.vpb.addPort(self.vp1)
         self.vpb.addPort(self.vp2)
+        # self.vpb.addPort(self.vp3)  # CRITICAL: uncomment this
         self.vpb.execute()   # show the lights
 
         # Create initial temp sequence
@@ -189,11 +197,8 @@ class TrinityApp(App):
         self.tmain.start()
         self.out_queue.put("loadbank|")
 
-        # display the show items
-        for event in self.showlist.events:
-            new_event = parascreens.ShowListItem(len(self.show_events), event.type, event.source)
-            self.show_events.append(new_event)
-            self.home_screen.ids.show_list.add_widget(new_event)
+        # Load show file
+        self.load_show(self.show_list_file)
 
         # Initiate thread handler
         print('Attempting to start loop handler')
@@ -201,6 +206,18 @@ class TrinityApp(App):
         # self.play_temp_seq()
 
         return self.ui
+
+    def load_show(self, show_file_path=None):
+        """Load a show file into the ShowList object"""
+        lock = threading.Lock()
+        lock.acquire()
+        self.showlist.load(show_file_path)
+        # display the show items
+        for event in self.showlist.events:
+            new_event = parascreens.ShowListItem(self, len(self.show_events), event.type, event.source)
+            self.show_events.append(new_event)
+            self.home_screen.ids.show_list.add_widget(new_event)
+        lock.release()
 
     def bulb(self):
         """Purely for testing and panache... shows alll lights then extinguishes them"""
@@ -219,21 +236,28 @@ class TrinityApp(App):
 
     def loop_handler(self, dt=None):
         """Once this is called it will run each frame"""
+        lock = threading.Lock()
         if not self.in_handler:
             self.in_handler = True
             while self.ev_queue.empty() is False:
+                lock.acquire()
                 ev = self.ev_queue.get()
                 self.vpb.setEventExec(ev)
+                lock.release()
 
             while self.temp_ev_queue.empty() is False:
+                lock.acquire()
                 ev = self.temp_ev_queue.get()
                 self.vpb.setEventExec(ev)
+                lock.release()
 
             while self.in_queue.empty() is False:
+                lock.acquire()
                 self.process_thread_command(self.in_queue.get())
+                lock.release()
 
-            Clock.schedule_once(self.loop_handler, 0)  # call this on next frame
             self.in_handler = False
+            Clock.schedule_once(self.loop_handler, 0)  # call this on next frame
 
     def process_thread_command(self, cmdstr):
         """ process incoming commands from the main thread """
@@ -375,7 +399,22 @@ class TrinityApp(App):
             self.temp_out_queue.put("die")
             self.ttemp.join()  # wait for thread to finish
 
+    def initiate_recording(self, show_index):
+        """Sets up the recorder with a media file"""
+        event = self.showlist.get_event(show_index)
+        if event:
+            self.vp3.set_media(event.source, event.duration)
+            self.vp3.record()
+
+    def handle_recording_comtrol(self, button_text):
+        pass
+
+    def commit_recording(self):
+        pass
+
+
     # ~~~~~~~~~~~~~~~~~ these functions are written for the pyplayer class ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
     def on_loop(self, media_path, time_sig):
         print("On Loop called with time signature " + str(time_sig) + " for media " + media_path)

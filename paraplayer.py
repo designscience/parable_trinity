@@ -50,7 +50,8 @@ class ParaPlayer(threading.Thread):
         # CONSIDER: actually, maybe not, if the program loop halts it may result in less than perfect operation. TBD!!!
         print("Entering media thread")
         self.is_active = True
-        while self._stop_thread.is_set() is False or self.player.is_playing() is True:
+        # while self._stop_thread.is_set() is False or self.player.is_playing() is True:
+        while self._stop_thread.is_set() is False:
             while self.is_active is True or self.player.is_playing() is True:
                 # while self.is_active is True:
                 self._check_playback()
