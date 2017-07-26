@@ -34,7 +34,7 @@ class TrinityApp(App):
 
         # Settings
         self.num_channels = 18  # number of output channels
-        self.num_buttons = 35  # number of possible sequence buttons
+        self.num_buttons = 64  # number of possible sequence buttons
 
         self.countdown = 0
 
@@ -142,6 +142,7 @@ class TrinityApp(App):
 
         # Show list is used to play back music and sequences together
         self.showlist = showlist.ShowList(self.player, self.out_queue, self.show_list_file)
+        self.show_events = []
 
         self.in_handler = False  # prevent too much recursion into loop handler
 
@@ -187,6 +188,12 @@ class TrinityApp(App):
         # start and initialize main thread
         self.tmain.start()
         self.out_queue.put("loadbank|")
+
+        # display the show items
+        for event in self.showlist.events:
+            new_event = parascreens.ShowListItem(len(self.show_events), event.type, event.source)
+            self.show_events.append(new_event)
+            self.home_screen.ids.show_list.add_widget(new_event)
 
         # Initiate thread handler
         print('Attempting to start loop handler')

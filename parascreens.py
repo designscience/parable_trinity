@@ -4,8 +4,9 @@ from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.widget import Widget
 from kivy.uix.button import Button
 from kivy.app import App
-from kivy.core.window import Window
-from kivy.uix.image import Image
+from kivy.uix.boxlayout import BoxLayout
+# from kivy.core.window import Window
+# from kivy.uix.image import Image
 # from kivy.properties import ListProperty, NumericProperty, ReferenceListProperty, ObjectProperty
 # from kivy.config import Config
 # from kivy.graphics import Canvas
@@ -88,3 +89,16 @@ class SequenceButton(Button):
         self.background_color = [0.3, 0.3, 0.3, 1]
         self.color = [1, 1, 1, 1]
 
+
+class ShowListItem(BoxLayout):
+    def __init__(self, item_index, item_type, media_file):
+        super(BoxLayout, self).__init__()
+        self.item_index = item_index
+        self.ids.item_type.text = item_type
+        self.ids.media_file.text = media_file
+
+    def set_active(self):
+        pass
+
+    def clear_active(self):
+        pass

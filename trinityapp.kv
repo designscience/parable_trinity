@@ -13,7 +13,7 @@
             size: self.size
             pos: self.pos
     Button:
-        size_hint: 0.2, 0.1
+        size_hint: 0.2, 0.05
         pos_hint: {'center_x': 0.5, 'y': 0.02}
         id: activate_button
         text: 'play show'
@@ -46,15 +46,63 @@
 #        center_x: self.parent.width * 0.5
         y: self.parent.height * 0.98 - light_panel.height - 20 - self.height
     FloatLayout:
-        id: sync_controls
+        id: show_panel
+        canvas.before:
+            Color:
+                rgba: 0, 0.3, 0.4, 1
+            Rectangle:
+                size: self.size
+                pos: self.pos
+        padding: 10, 10
+        spacing: 30
+        size_hint: 0.98, 0.4
+        pos_hint: {'center_x': 0.5}
+        y: self.parent.height * 0.98 - light_panel.height - 40 - sequence_panel.height - self.height
+        FloatLayout:
+            id: show_controls
+#            canvas.before:
+#                Color:
+#                    rgba: 0, 0, 0, 1
+#                Rectangle:
+#                    size: self.size
+#                    pos: self.pos
+            size_hint: 1, .1
+            y: show_panel.height + show_panel.y - self.height
+            x: show_panel.x
+            spacing: 20
+            Button:
+                id: prev_button
+                size_hint: None, 1
+                width: self.parent.width * 0.2
+                text: 'prev'
+                y: self.parent.y
+                center_x: 0.25 * self.parent.width
+            ToggleButton:
+                id: play_button
+                size_hint: None, 1
+                width: self.parent.width * 0.2
+                text: 'play'
+                y: self.parent.y
+                center_x: 0.5 * self.parent.width
+            Button:
+                id: next_button
+                size_hint: None, 1
+                width: self.parent.width * 0.2
+                text: 'next'
+                y: self.parent.y
+                center_x: 0.75 * self.parent.width
+        StackLayout:
+            id: show_list
+            size_hint: 1, None
+            height: show_panel.height - show_controls.height - 20
+            y: show_panel.y
+            x: show_panel.x
+            orientation: 'tb-lr'
+            spacing: 5
+
+    FloatLayout:
+        id: beat_controls
         size_hint: 0.3, 0.08
-#        pos_hint: 0, 0.01
-#        canvas.before:
-#            Color:
-#                rgba: .1, .1, .1, 1
-#            Rectangle:
-#                size: self.size
-#                pos: self.pos
         Image:
             id: beat_light
             x: 20
@@ -81,9 +129,6 @@
             background_color: .4, .4, .4, 1
             on_state: root.app.on_use_beat(self)
 
-
-
-
 <ChannelLight>:
     canvas.before:
         Color:
@@ -101,10 +146,38 @@
 
 <SequenceButton>:
     text: ''
-    size_hint: 0.18, 0.12
+    size_hint: 0.12, 0.12
 #    height: '130px'
 #    width: '290px'
     color: 1, 1, 1, 1
     background_color: 0.3, 0.3, 0.3, 1
     on_press: self.app.seq_btn_down(self)
     on_release: self.app.seq_btn_up(self)
+
+<ShowListItem>:
+    size_hint: 1, 0.06
+    ToggleButton:
+        size_hint: None, 1
+        width: self.parent.width * 0.06
+    Label:
+        id: item_type
+        halign: 'left'
+        valign: 'middle'
+        text: '???'
+        text_size: self.size
+        texture:
+        width: self.parent.width * 0.14
+        y: self.parent.y
+    Label:
+        id: media_file
+        halign: 'left'
+        valign: 'middle'
+        text: 'my file'
+        text_size: media_file.size
+        texture:
+        width: self.parent.width * 0.7
+        y: self.parent.y
+    Button:
+        text: 'record'
+        size_hint: None, 1
+        width: self.parent.width * 0.1
