@@ -1269,6 +1269,7 @@ class ValvePort_Ethernet(ValvePort):
         self.host = remote_addr
         self.port = remote_port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.settimeout(2.0)
         self.is_connected = False
         self.verbose = verbose
         self.connect()
@@ -1282,7 +1283,6 @@ class ValvePort_Ethernet(ValvePort):
         """Connect to the sockect"""
         if not self.is_connected:
             try:
-                self.sock.settimeout(2.0)
                 self.sock.connect((self.host, self.port))
                 self.is_connected = True
             except InterruptedError:
