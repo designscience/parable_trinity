@@ -21,12 +21,12 @@
         on_press: root.app.start_the_show()
     StackLayout:
         id: light_panel
-        canvas.before:
-            Color:
-                rgba: 0, 0, 0, 1
-            Rectangle:
-                size: self.size
-                pos: self.pos
+#        canvas.before:
+#            Color:
+#                rgba: 0, 0, 0, 1
+#            Rectangle:
+#                size: self.size
+#                pos: self.pos
         padding: 10, 10
         size_hint: None, None
         size: '1820px', '120px'
@@ -141,15 +141,8 @@
             on_state: root.app.on_use_beat(self)
 
 <ChannelLight>:
-    canvas.before:
-        Color:
-            rgba: 1, 1, 1, 0.5
-        Rectangle:
-            pos: self.pos
-            size: self.size
     size_hint: None, None
     size: 100, 100
-    background_normal: 'images/no-flame.png'
     Image:
         id: flame
         source: ''

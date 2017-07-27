@@ -1287,6 +1287,7 @@ class ValvePort_Ethernet(ValvePort):
         self.port = remote_port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(2.0)
+        self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self.is_connected = False
         self.verbose = verbose
         self.fail_count = 0

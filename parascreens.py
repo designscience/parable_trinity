@@ -70,13 +70,16 @@ class ChannelLight(RelativeLayout):
         else:
             self.on_source = 'images/flame-northeast.png'
             self.off_source = 'images/pilot-northeast.png'
-        self.ids.flame.source = self.off_source
+        self.ids.flame.source = self.on_source
+        self.ids.flame.opacity = 0
 
     def on(self):
-        self.ids.flame.source = self.on_source
+        # self.ids.flame.source = self.on_source
+        self.ids.flame.opacity = 1
 
     def off(self):
-        self.ids.flame.source = self.off_source
+        # self.ids.flame.source = self.off_source
+        self.ids.flame.opacity = 0
 
 
 class SequenceButton(Button):
