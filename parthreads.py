@@ -137,7 +137,7 @@ class ControlBank(object):
                 self.start(cmd[1])
 
             elif cmd[0] == "stop":
-                if len(cmd[1]) > 0:
+                if len(cmd) > 1:
                     if self.stop(cmd[1]) is True:
                         self.out_q.put("stopped|" + cmd[1])
                 else:

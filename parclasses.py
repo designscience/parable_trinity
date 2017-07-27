@@ -408,8 +408,8 @@ class ControlEvent(object):
         result.set("scale_factor", str(self.scale_factor))
         result.set("value", str(self.value))
         result.set("sequence", str(self.sequence))
-        
-        return result 
+
+        return result
             
     def loadFromXML(self, xml_element):
         """ loads this object from an ElementTree.Element object """
@@ -559,6 +559,23 @@ class ControlList(object):
         
         for ev in self.events:
             ev.time.addTime(frames)
+
+    # New for 2017... to replace the one above. Main issue was adding a negative offset to time 0 events
+    # This ignores time 0 events as special cases
+    def addOffsetFrames(self, offset):
+        """Adds a time offset, in frames, to the entire list, usually prior to
+            overlaying in another list"""
+        if isinstance(offset, TimeCode):
+            frames = offset.total_frames
+        else:
+            frames = int(offset)
+
+        for ev in self.events:
+            if ev.time.total_frames > 0:
+                ev.time.total_frames += frames
+                if ev.time.total_frames < 0:
+                    ev.time.total_frames = 0
+            ev.time.makeSeconds()
 
     # original version - see FAILED-1 for new version
     def setBaseTime(self, base_time=0):
@@ -958,7 +975,8 @@ class ControlList(object):
         # load events
         events = ET.SubElement(root, "events")
         for ev in self.events:
-            ev.getXMLElement(events)
+            ev_node = ev.getXMLElement(events)
+            events.append(ev_node)
 
         # save file
         tree = ET.ElementTree(root)
@@ -1265,36 +1283,40 @@ class ValvePort_Parallel(ValvePort):
 class ValvePort_Ethernet(ValvePort):
     """Implements a ValvePort control path over Ethernet. Intended for use with Puff.py running on the Gray Box"""
     def __init__(self, channels=24, channelsperbank=6, remote_addr='127.0.0.1', remote_port=4444, verbose=False):
-        ValvePort.__init__(self, channels, channelsperbank)
         self.host = remote_addr
         self.port = remote_port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(2.0)
         self.is_connected = False
         self.verbose = verbose
+        self.fail_count = 0
+        ValvePort.__init__(self, channels, channelsperbank)
         self.connect()
 
     def __del__(self):
         """Clean up socket"""
-        self.sock.shutdown()
+        # self.sock.shutdown()
         self.sock.close()
 
     def connect(self):
         """Connect to the sockect"""
-        if not self.is_connected:
+        if not self.is_connected and self.fail_count < 10:
             try:
                 self.sock.connect((self.host, self.port))
                 self.is_connected = True
             except InterruptedError:
                 print('The socket connection was interrupted')
                 self.is_connected = False
+                self.fail_count += 1
             except socket.timeout:
                 print('Timed out waiting for a socket connection to {0}:{1}'.format(self.host, self.port))
                 self.is_connected = False
+                self.fail_count += 1
             except:
                 print('An unknown error occured while attempting a socket connection to {0}:{1}'
                       .format(self.host, self.port))
                 self.is_connected = False
+                self.fail_count += 1
 
         return self.is_connected
 
@@ -1379,30 +1401,26 @@ class ValvePort_Recorder(ValvePort):
     def set_media(self, media_file, duration=0, media_path=None):
         """Loads media into the player"""
         self.player.stop()
-        self._init_layers()
         self.media_file = media_file
         if media_path is not None:
             self.media_path = media_path  # Path to music files
+        self._init_layers()
         self.player.set_media(self.media_path + self.media_file, duration)
-
-        # Load .temp.seqx file here as top layer (if exists)
-        path = './recordings/{}.temp.seqx'.format(self.media_file)
-        if os.path.isfile(path):
-            self.layers[self.current_layer].loadXML(path)
 
     def on_start(self, media, media_time):
         """Called when the media begins playing, signalling start of recording """
         self.recording_start = time.time() - media_time  # correct for delayed starting
+        print('Output recording started at {}'.format(self.recording_start))
 
     def on_completion(self, media, media_time):
         """Called when media playback completes or has reached the end of the time frame"""
         # Compare the local time to the media time sent and set an adjusting offset in the ControlList
-        rtime = time.time() - self.recording_start
         # CRITICAL: test this!
-        # if fabs(rtime - media_time) > (1000 / 15):
-        #     self.layers[self.current_layer].offsetTime((media_time - rtime) / 33.3333)  # offset time is in frames
-        # CRiticAL: remove this
-        self.commit()
+        if self.recording_start > 0:
+            rtime = time.time() - self.recording_start
+            if fabs(rtime - media_time) * 30 > 2.0:
+                offset = (media_time - rtime) * 30
+                self.layers[self.current_layer].addOffsetFrames(offset)  # offset time is in frames
         self.recording_start = 0.0  # no longer recording
 
     def record(self):
@@ -1410,8 +1428,6 @@ class ValvePort_Recorder(ValvePort):
         if self.layer_recorded is False:
             self.recording_start = time.time()
             self.player.play()
-        else:
-            raise RuntimeError('ValvePort_Recorder: Attempt to record to a previously recorded1 layer.')
 
     def stop(self):
         """Stops the recording and returns true if the layer has been recorded (needs accept/reject)"""
@@ -1420,14 +1436,15 @@ class ValvePort_Recorder(ValvePort):
 
     def accept(self):
         """Accepts the current layer, creates a new layer and rewinds the player to the start"""
-        self.layers.append(ControlList())
-        self.current_layer += 1
-        self.layer_recorded = False
+        if self.layer_recorded:
+            self.layers.append(ControlList())
+            self.current_layer += 1
+            self.layer_recorded = False
         self.player.rewind()
 
     def commit(self):
         """Combines all ControlList files and writes them to the disk"""
-        if len(self.layers) > 1 or (len(self.layers) > 0 and self.layer_recorded is True):
+        if len(self.layers) > 0 and self.layer_recorded is True or len(self.layers) > 1:
             final = ControlList()
             for layer in self.layers:
                 final.overlay(layer)
@@ -1445,7 +1462,7 @@ class ValvePort_Recorder(ValvePort):
     def current_time_in_frames(self):
         """Calculates the current recording time as frames (1/30 sec)"""
         if self.recording_start > 0.0:
-            return int((time.time() - self.recording_start) / 33.3333)
+            return int((time.time() - self.recording_start) * 30)
         else:
             return False
 
@@ -1475,10 +1492,17 @@ class ValvePort_Recorder(ValvePort):
         if len(self.layers) > 0 or self.layer_recorded is True:
             for layer in self.layers:
                 del layer
-            self.layers.clear()
+            self.layers = []
+
         self.layers.append(ControlList())
         self.current_layer = 0
         self.recording_start = 0.0  # by def we're not recording
+
+        # Load .temp.seqx file as top layer, if exists
+        # TODO: check that this doesn't fail or falsely load the wrong media
+        path = './recordings/{}.temp.seqx'.format(self.media_file)
+        if os.path.isfile(path):
+            self.layers[self.current_layer].loadXML(path)
 
 
 # *********************** ValvePortBank ****************************

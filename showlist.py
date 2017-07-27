@@ -17,6 +17,9 @@ class ShowListEvent(object):
         self.type = data.get("type", "none")
         self.time = float(data.get("time", "0.0"))
 
+        if self.source != '' and self.sequence == 'default':
+            self.sequence = '{}.seqx'.format(self.source)
+
 
 class ShowList(object):
     """This class reads in events from a .show file and manages playback of the show"""
@@ -87,7 +90,7 @@ class ShowList(object):
 
     def start(self):
         """Think of this as "play first"""
-        # TODO: might need to reinstantiate the thread here
+        # CRITICAL: MUST reinstantiate the thread here
         # self.stop()
         if not self.locked:
             self.locked = True

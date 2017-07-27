@@ -1,10 +1,10 @@
 import kivy
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.relativelayout import RelativeLayout
-from kivy.uix.widget import Widget
 from kivy.uix.button import Button
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
+# from kivy.uix.widget import Widget
 # from kivy.core.window import Window
 # from kivy.uix.image import Image
 # from kivy.properties import ListProperty, NumericProperty, ReferenceListProperty, ObjectProperty
@@ -27,6 +27,7 @@ class HomeScreen(FloatLayout):
         # self._keyboard = Window.request_keyboard(self._keyboard_closed, self)
         # self._keyboard.bind(on_key_down=self._on_keyboard_down)
         super(FloatLayout, self).__init__()
+        self.hide_recorder_controls()
 
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
         """Handle key presses"""
@@ -48,6 +49,12 @@ class HomeScreen(FloatLayout):
 
     def clear(self):
         self.ids.light_panel.clear_widgets()
+
+    def show_recorder_controls(self):
+        self.ids.recorder_panel.disabled = False
+
+    def hide_recorder_controls(self):
+        self.ids.recorder_panel.disabled = True
 
 
 class ChannelLight(RelativeLayout):
@@ -97,6 +104,8 @@ class ShowListItem(BoxLayout):
         self.ids.item_type.text = item_type
         self.ids.media_file.text = media_file
         self.app = app
+        if item_type != 'music':
+            self.ids.btn_record.opacity = 0.0
 
     def set_active(self):
         pass

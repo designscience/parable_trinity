@@ -58,7 +58,7 @@
         size_hint: 0.98, 0.4
         pos_hint: {'center_x': 0.5}
         y: self.parent.height * 0.98 - light_panel.height - 40 - sequence_panel.height - self.height
-        FloatLayout:
+        BoxLayout:
             id: show_controls
 #            canvas.before:
 #                Color:
@@ -72,25 +72,36 @@
             spacing: 20
             Button:
                 id: prev_button
-                size_hint: None, 1
-                width: self.parent.width * 0.2
                 text: 'prev'
-                y: self.parent.y
-                center_x: 0.25 * self.parent.width
+                on_press: root.app.on_show_control_button(self.text)
             ToggleButton:
                 id: play_button
-                size_hint: None, 1
-                width: self.parent.width * 0.2
-                text: 'play'
-                y: self.parent.y
-                center_x: 0.5 * self.parent.width
+                text: 'PLAY'
+                on_press: root.app.on_show_control_button(self.text, self.state)
             Button:
                 id: next_button
-                size_hint: None, 1
-                width: self.parent.width * 0.2
                 text: 'next'
-                y: self.parent.y
-                center_x: 0.75 * self.parent.width
+                on_press: root.app.on_show_control_button(self.text)
+            BoxLayout:
+                id: recorder_panel
+                Button:
+                    id: record_button
+                    text: 'record'
+                    background_color: 1, 0, 0, 1
+                    on_press: root.app.on_recorder_button(self.text)
+                Button:
+                    id: discard_button
+                    text: 'discard'
+                    on_press: root.app.on_recorder_button(self.text)
+                Button:
+                    id: accept_button
+                    text: 'accept'
+                    on_press: root.app.on_recorder_button(self.text)
+                Button:
+                    id: commit_button
+                    background_color: 0, 1, 0, 1
+                    text: 'commit'
+                    on_press: root.app.on_recorder_button(self.text)
         StackLayout:
             id: show_list
             size_hint: 1, None
@@ -156,9 +167,9 @@
 
 <ShowListItem>:
     size_hint: 1, 0.06
-    ToggleButton:
-        size_hint: None, 1
-        width: self.parent.width * 0.06
+#    ToggleButton:
+#        size_hint: None, 1
+#        width: self.parent.width * 0.06
     Label:
         id: item_type
         halign: 'left'
@@ -178,6 +189,7 @@
         width: self.parent.width * 0.7
         y: self.parent.y
     Button:
+        id: btn_record
         text: 'record'
         size_hint: None, 1
         width: self.parent.width * 0.1
