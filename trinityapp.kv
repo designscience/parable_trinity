@@ -12,21 +12,15 @@
         Rectangle:
             size: self.size
             pos: self.pos
-    Button:
-        size_hint: 0.2, 0.05
-        pos_hint: {'center_x': 0.5, 'y': 0.02}
-        id: activate_button
-        text: 'play show'
-        size: self.parent.width, self.parent.height
-        on_press: root.app.start_the_show()
+#    Button:
+#        size_hint: 0.2, 0.05
+#        pos_hint: {'center_x': 0.5, 'y': 0.02}
+#        id: activate_button
+#        text: 'play show'
+#        size: self.parent.width, self.parent.height
+#        on_press: root.app.start_the_show()
     StackLayout:
         id: light_panel
-#        canvas.before:
-#            Color:
-#                rgba: 0, 0, 0, 1
-#            Rectangle:
-#                size: self.size
-#                pos: self.pos
         padding: 10, 10
         size_hint: None, None
         size: '1820px', '120px'
@@ -43,13 +37,12 @@
         spacing: 20
         size_hint: 0.98, 0.4
         pos_hint: {'center_x': 0.5}
-#        center_x: self.parent.width * 0.5
         y: self.parent.height * 0.98 - light_panel.height - 20 - self.height
     FloatLayout:
         id: show_panel
         canvas.before:
             Color:
-                rgba: 0, 0.3, 0.4, 1
+                rgba: 0, 0.15, 0.2, 1
             Rectangle:
                 size: self.size
                 pos: self.pos
@@ -130,19 +123,41 @@
             x: 164
             background_color: .6, .6, .6, 1
             on_press: root.app.on_tap_press()
+        Button:
+            id: btn_align
+            size_hint: None, None
+            text: 'Align'
+            size: '280px', '120px'
+            top: 130
+            x: 500
+            background_color: .6, .6, .6, 1
+            on_press: root.app.on_align_press()
         ToggleButton:
             id: use_beat
             size_hint: None, None
             text: 'Use Beat'
             size: '180px', '80px'
             top: 110
-            x: 500
+            x: 900
             background_color: .4, .4, .4, 1
             on_state: root.app.on_use_beat(self)
+        Button:
+            id: kill
+            size_hint: None, None
+            text: 'kill'
+            size: '780px', '120px'
+            top: 130
+            x: 1200
+            background_color: 1, 0, .2, 1
+            on_press: root.app.on_kill_press()
 
 <ChannelLight>:
     size_hint: None, None
     size: 100, 100
+    Image:
+        id: pilot
+        source: ''
+        left: 0
     Image:
         id: flame
         source: ''

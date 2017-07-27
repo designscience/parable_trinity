@@ -48,7 +48,7 @@ class TrinityApp(App):
         self.trigger_times = [0.0] * self.num_buttons  # Sequence name
         # self.remote_addr = '192.168.1.115'
         self.remote_addr = '192.32.12.3'
-        self.seq_directory = "/Users/Stu/Documents/Compression/Sequences/"
+        self.seq_directory = "/Users/Stu/Documents/Compression/Sequences/2014 All/"
         # self.show_seq_directory = "/Users/Stu/Documents/Compression/Sequences/Show/"
         self.music_directory = "/Users/Stu/Documents/Compression/Music/"
         self.show_list_file = "/Users/Stu/Documents/Compression/compression.show.xml"
@@ -174,7 +174,7 @@ class TrinityApp(App):
         self.vp2.setMap(self.graybox_map)
 
         # Recorder object
-        self.vp3 = parclasses.ValvePort_Recorder(24, 6, self.music_directory)
+        self.vp3 = parclasses.ValvePort_Recorder(24, 6, self.music_directory, self.on_kill_press)
         self.vp3.setMap(self.straight_map)
 
         # add output objects to an output bank
@@ -355,6 +355,25 @@ class TrinityApp(App):
         if self.home_screen.ids.use_beat.state == 'normal':
             self.home_screen.ids.use_beat.state = 'down'
             # self.out_queue.put("usebeat|yes")
+
+    def on_kill_press(self):
+        """terminate sequences with extreme prejudice"""
+        self.out_queue.put("stop|")
+        self.home_screen.ids.use_beat.state = 'normal'
+        self.out_queue.put("usebeat|no")
+        self.vpb.reset()
+        self.auto_pilot = False
+        if self.tmain.isAlive():
+            self.title = "Thread is alive"
+        else:
+            self.title = "Threads dead - attempting restart"
+            self.tmain = threading.Thread(target=self.cb, args=(self.ev_queue, self.out_queue, self.in_queue))
+            self.tmain.start()
+            self.out_queue.put("stop|")
+
+    def on_align_press(self):
+        """ realign the start_time for the tap beat"""
+        self.out_queue.put("align|" + str(time.time()))
 
     def play_temp_seq(self):
         """Plays the temp sequence that is initialized with a randy sequence"""

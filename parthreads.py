@@ -93,8 +93,7 @@ class ControlBank(object):
                     else:
                         self.out_q.put("beaton")
                     lock.release()
-                    # wx.WakeUpIdle()
-                
+
                 if self.allClear() is True:
                     time.sleep(.01)
             else:
@@ -115,7 +114,6 @@ class ControlBank(object):
                 ev = seq.getNextByTime()
                 if isinstance(ev, parclasses.ControlEvent):
                     self.ev_q.put(ev)
-                    # wx.WakeUpIdle()
                 else:
                     if ev is True and self.out_q:
                         self.out_q.put("stopped|" + seq.name)
@@ -270,12 +268,13 @@ class ControlBank(object):
                         # path = self.seq_dir + "\\" + filename
                         path = str(self.seq_dir + filename)  # casting to str fixes win2k bug
                         print(filename)
+                        # TODO: control list reports whether it is a show sequence and if it has a beat
                         seq = parclasses.ControlList(path)
                         seq.name = parts[0]
                         self.sequences.append(seq)
                         if self.out_q:
+                            # TODO: return indicators for beat and show sequences, strip and use in main thread
                             self.out_q.put("newseq|" + parts[0])
-                            # wx.WakeUpIdle()
                         result = True
                             
             # load the selected bank

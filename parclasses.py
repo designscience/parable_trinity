@@ -571,11 +571,12 @@ class ControlList(object):
             frames = int(offset)
 
         for ev in self.events:
-            if ev.time.total_frames > 0:
-                ev.time.total_frames += frames
-                if ev.time.total_frames < 0:
-                    ev.time.total_frames = 0
-            ev.time.makeSeconds()
+            if ev.ref_time.total_frames > 0:
+                ev.ref_time.total_frames += frames
+                if ev.ref_time.total_frames < 0:
+                    ev.ref_time.total_frames = 0
+            ev.ref_time.makeSeconds()
+            ev.time = ev.ref_time
 
     # original version - see FAILED-1 for new version
     def setBaseTime(self, base_time=0):
@@ -1380,7 +1381,7 @@ class ValvePort_Recorder(ValvePort):
      Control List and saves this to a temporary seqx file, following the name of the media. Subsequent recording sessions
      to the same media file will attempt to reload the .temp.seqx file, making it the top-level layer and allowing the
      work to continue."""
-    def __init__(self, channels=24, channelsperbank=6, media_path='./'):
+    def __init__(self, channels=24, channelsperbank=6, media_path='./', kill_callback=None):
         self.player = paraplayer.ParaPlayer()
         self.layers = []  # list of ControlList objects
         self.current_layer = 0  # Index of layer staged for recording
@@ -1393,6 +1394,7 @@ class ValvePort_Recorder(ValvePort):
 
         self.player.set_start_callback(self.on_start)
         self.player.set_finish_callback(self.on_completion)
+        self.kill_callback = kill_callback
         ValvePort.__init__(self, channels, channelsperbank)
 
     # CONSIDER: is this useful?
@@ -1415,8 +1417,9 @@ class ValvePort_Recorder(ValvePort):
 
     def on_completion(self, media, media_time):
         """Called when media playback completes or has reached the end of the time frame"""
+        if self.kill_callback:
+            self.kill_callback()
         # Compare the local time to the media time sent and set an adjusting offset in the ControlList
-        # CRITICAL: test this!
         if self.recording_start > 0:
             rtime = time.time() - self.recording_start
             if fabs(rtime - media_time) * 30 > 2.0:

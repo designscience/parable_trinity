@@ -70,6 +70,7 @@ class ChannelLight(RelativeLayout):
         else:
             self.on_source = 'images/flame-northeast.png'
             self.off_source = 'images/pilot-northeast.png'
+        self.ids.pilot.source = self.off_source
         self.ids.flame.source = self.on_source
         self.ids.flame.opacity = 0
 
