@@ -1372,6 +1372,7 @@ class ValvePort_Recorder(ValvePort):
         self.player.set_finish_callback(self.on_completion)
         ValvePort.__init__(self, channels, channelsperbank)
 
+    # CONSIDER: is this useful?
     def __del__(self):
         self.player.kill()
 
