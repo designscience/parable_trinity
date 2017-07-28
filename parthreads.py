@@ -274,26 +274,46 @@ class ControlBank(object):
                         self.sequences.append(seq)
                         if self.out_q:
                             # TODO: return indicators for beat and show sequences, strip and use in main thread
-                            self.out_q.put("newseq|" + parts[0])
+                            self.out_q.put("newseq|" + str(parts[0]))
                         result = True
-                            
+
             # load the selected bank
             if len(bank_name) > 0:
                 # folder = self.seq_dir + "\\" + bank_name
                 folder = self.seq_dir + bank_name
-                for filename in os.listdir(folder):
+                try:
+                    for filename in os.listdir(folder):
+                        parts = filename.rpartition('.')
+                        if parts[2] == "seqx":
+                            path = str(folder + "/" + filename)  # casting to str fixes win2k bug
+                            print(filename)
+                            seq = parclasses.ControlList(path)
+                            seq.name = parts[0]
+                            seq.stop()  # force a stop condition
+                            self.sequences.append(seq)
+                            if self.out_q:
+                                self.out_q.put("newseq|" + str(parts[0]))
+                            result = True
+                except FileNotFoundError:
+                    pass
+
+            # Load show music sequence bank
+            # NOTE: uses a-priori Show sequence folder
+            if self.autoload is True:
+                for filename in os.listdir(self.seq_dir + 'Show/'):
                     parts = filename.rpartition('.')
                     if parts[2] == "seqx":
-                        path = str(folder + "\\" + filename)  # casting to str fixes win2k bug
+                        # path = self.seq_dir + "\\" + filename
+                        path = str(self.seq_dir + 'Show/' + filename)  # casting to str fixes win2k bug
                         print(filename)
+                        # TODO: control list reports whether it is a show sequence and if it has a beat
                         seq = parclasses.ControlList(path)
                         seq.name = parts[0]
-                        seq.stop()  # force a stop condition
                         self.sequences.append(seq)
                         if self.out_q:
-                            self.out_q.put("newseq|" + parts[0])
+                            # TODO: return indicators for beat and show sequences, strip and use in main thread
+                            self.out_q.put("newseq|" + str(parts[0]) + '.')
                         result = True
-
         else:
             self.stop()
 
@@ -309,5 +329,3 @@ class ControlBank(object):
                 break
 
         return result
-
-

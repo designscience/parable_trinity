@@ -150,6 +150,22 @@
             x: 1200
             background_color: 1, 0, .2, 1
             on_press: root.app.on_kill_press()
+        TextInput:
+            id: bank_name
+            size_hint: None, None
+            size: '220px', '80px'
+            top: 110
+            x: 2100
+            background_color: .6, .6, .6, 1
+        Button:
+            id: btn_load_bank
+            text: 'Load'
+            size_hint: None, None
+            size: '180px', '80px'
+            top: 110
+            x: 2350
+            background_color: .4, .4, .4, 1
+            on_state: root.load_bank()
 
 <ChannelLight>:
     size_hint: None, None

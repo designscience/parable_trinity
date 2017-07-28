@@ -4,6 +4,7 @@ from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.button import Button
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
+from re import match
 # from kivy.uix.widget import Widget
 # from kivy.core.window import Window
 # from kivy.uix.image import Image
@@ -56,6 +57,10 @@ class HomeScreen(FloatLayout):
     def hide_recorder_controls(self):
         self.ids.recorder_panel.disabled = True
 
+    def load_bank(self):
+        self.app.on_load_bank(self.ids.bank_name.text)
+        self.ids.bank_name.text = ''
+
 
 class ChannelLight(RelativeLayout):
     def __init__(self, index):
@@ -89,7 +94,11 @@ class SequenceButton(Button):
         super(Button, self).__init__()
         self.trigger_time = 0.0
         self.sequence_name = sequence_name
-        self.text = sequence_name
+        if match('.+\.$', self.sequence_name) is None:
+            self.text = sequence_name
+        else:
+            self.text = sequence_name[:-1]
+            self.disabled = True
         self.app = app
 
     def show_running(self):

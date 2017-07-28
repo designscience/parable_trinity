@@ -10,6 +10,11 @@ class ParaPlayer(threading.Thread):
     def __init__(self):
         self.Instance = vlc.Instance()
         self.player = self.Instance.media_player_new()
+
+        # Lines below are unused but may come in handy on a rainy day
+        # self.vlc_events = self.player.event_manager()
+        # self.vlc_events.event_attach(vlc.EventType.MediaPlayerEndReached, self., 1)
+
         self.media_path = None
         self.playback_length = 0  # length of playback before stopping or 0
         self.start_time = 0.0  # For silence playback tracking, time play started
@@ -51,6 +56,8 @@ class ParaPlayer(threading.Thread):
         print("Entering media thread")
         self.is_active = True
         # while self._stop_thread.is_set() is False:
+        # CRITICAL: are there two competing conditions or are both needed?
+        # CRITICAL: self.player.is_playing() returns 0/1, is never True of False!!! Not being checked
         while self._stop_thread.is_set() is False or self.player.is_playing() is True:
             while self.is_active is True or self.player.is_playing() is True:
                 self._check_playback()
@@ -61,7 +68,7 @@ class ParaPlayer(threading.Thread):
     def kill(self):
         """kill this thread, orderly like"""
         print("Killing playback thread")
-        self.is_active = False
+        self.is_active = False  # CRITICAL: does this conflict with is_active() on threading.thread?
         self._stop_thread.set()
 
     # Set callback functions for event mgt. All functions get media_path and current playback time
@@ -105,7 +112,7 @@ class ParaPlayer(threading.Thread):
         if self.is_playing:
             self.is_playing = False
             self.pause_time = time.time()
-            if self.player.is_playing():
+            if self.player.is_playing() == 1:
                 self.player.pause()
 
     def stop(self):
@@ -151,7 +158,7 @@ class ParaPlayer(threading.Thread):
             ptime = time.time() - self.start_time
         else:
             ptime = float(self.player.get_time() / 1000)
-            if self.player.is_playing():
+            if self.player.is_playing() == 1:
                 self.player.stop()
 
         # Ring callback function
@@ -194,7 +201,7 @@ class ParaPlayer(threading.Thread):
                     else:
                         # Check whether player reached the end (self.is_playing still set)
                         if self.media_path is not None:
-                            if self.player.is_playing() is False:
+                            if self.player.is_playing() == 0:
                                 ptime = self._halt_playback()
 
             # Call the finish callback

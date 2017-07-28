@@ -127,11 +127,11 @@ class ShowList(object):
 
     def on_completion(self, media_path, time_sig):
         # TODO: need to determine if the sequence is longer than the music. Rare, but possible.
+        if media_path:
+            print("On Completion called with time signature " + str(time_sig) + " for media " + media_path)
+        else:
+            print("On Completion called after pause at " + str(time_sig))
         if not self.show_paused:
-            if media_path:
-                print("On Completion called with time signature " + str(time_sig) + " for media " + media_path)
-            else:
-                print("On Completion called after pause at " + str(time_sig))
             self.play_next()
 
     def on_start(self, media_path, time_sig):

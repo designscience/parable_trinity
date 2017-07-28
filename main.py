@@ -48,7 +48,7 @@ class TrinityApp(App):
         self.trigger_times = [0.0] * self.num_buttons  # Sequence name
         # self.remote_addr = '192.168.1.115'
         self.remote_addr = '192.32.12.3'
-        self.seq_directory = "/Users/Stu/Documents/Compression/Sequences/2014 All/"
+        self.seq_directory = "/Users/Stu/Documents/Compression/Sequences/"
         # self.show_seq_directory = "/Users/Stu/Documents/Compression/Sequences/Show/"
         self.music_directory = "/Users/Stu/Documents/Compression/Music/"
         self.show_list_file = "/Users/Stu/Documents/Compression/compression.show.xml"
@@ -290,7 +290,7 @@ class TrinityApp(App):
         # clearbank - hide sequence buttons
         elif cmd[0] == "clearbank":
             for button in self.sequences:
-                self.ui.ids.sequence_panel.remove_widget(button)
+                self.home_screen.ids.sequence_panel.remove_widget(button)
                 self.sequences.remove(button)
                 del button
             self.sequences = []
@@ -374,6 +374,17 @@ class TrinityApp(App):
     def on_align_press(self):
         """ realign the start_time for the tap beat"""
         self.out_queue.put("align|" + str(time.time()))
+
+
+    def on_load_bank(self, bank_name):
+        """Loads a bank at the path described by the sequence folder plus this bank name"""
+        if bank_name != '':
+            if self.seq.running() is False:
+                self.out_queue.put("clearbank")
+                self.out_queue.put("loadbank|" + bank_name)
+            else:
+                self.temp_out_queue.put("stop")
+                print("Sequence was running. Please try again")
 
     def play_temp_seq(self):
         """Plays the temp sequence that is initialized with a randy sequence"""
