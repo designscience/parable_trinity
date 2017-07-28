@@ -321,6 +321,8 @@ class TrinityApp(App):
         # exception - report exception
         elif cmd[0] == "exception":
             self.title = "Exception: " + cmd[1]
+        elif cmd[0] == "message":
+            self.title = str(cmd[1])
 
     def seq_btn_down(self, button: parascreens.SequenceButton):
         """ This is called on the down click of all sequence buttons.
@@ -382,6 +384,15 @@ class TrinityApp(App):
             if self.seq.running() is False:
                 self.out_queue.put("clearbank")
                 self.out_queue.put("loadbank|" + bank_name)
+
+                # Read the tempo from a file
+                tempofn = "" + self.seq_directory + bank_name + "/tempo.txt"
+                self.title = "{} not found".format(tempofn)
+                with open(tempofn, "r") as tempofile:
+                    if tempofile is not None:
+                        tempo = tempofile.readline()
+                        self.title = tempo
+                        self.out_queue.put("settempo|" + tempo)
             else:
                 self.temp_out_queue.put("stop")
                 print("Sequence was running. Please try again")

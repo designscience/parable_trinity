@@ -240,3 +240,11 @@ class Beatnik(object):
             passed reference beat time. Returns reference time back if this
             player object is not ready """
         return self.player.getCorrectedBeatTime(reference_beat_time)
+
+    def getPeriod(self):
+        """ Returns the period from the current player object """
+        return self.player.getPeriod()
+
+    def setPeriod(self, period):
+        """ Sets the period for the active tempo thingy """
+        self.player.period = float(period)

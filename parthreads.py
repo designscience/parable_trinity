@@ -155,6 +155,8 @@ class ControlBank(object):
                 try:
                     tap_time = float(cmd[1])
                     self.btic.BeatRecorder(tap_time)
+                    # Testing only - should be in a better location
+                    self.out_q.put("message|beat period: " + str(self.btic.getPeriod()))
                 except Exception as e:
                     self.out_q.put("exception: {0}".format(e))
 
@@ -178,7 +180,9 @@ class ControlBank(object):
                     self.use_beat = False
                     for seq in self.sequences:
                         seq.stopSynching()
-                    # print("Not Using Beat")
+                    # print "Not Using Beat"
+            elif cmd[0] == "settempo":
+                self.btic.setPeriod(cmd[1])
 
         # clear or load bank
         if self.bank_clear_pending is True and self.allClear() is True:
