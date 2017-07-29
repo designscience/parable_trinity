@@ -124,8 +124,13 @@ class ShowList(object):
                 self.player.play()
 
     def resume(self):
-        """An alias - easier to remember for external control after a show pause"""
-        self.play_next()
+        """Plays the next event if one exists"""
+        self.paused_at = 0.0  # un-pause TODO: add adjusting time entry here for paused "paused" entries
+        if self.current_index < len(self.events):
+            self.play()
+        else:
+            # end of show
+            self.locked = False
 
     def play_next(self):
         """Plays the next event if one exists"""

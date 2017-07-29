@@ -465,9 +465,9 @@ class TrinityApp(App):
         elif button_text == 'pause':
             if self.showlist:
                 self.showlist.stop()
-        elif button_text == 'next':
+        elif button_text == 'resume':
             if self.showlist:
-                self.showlist.play_next()
+                self.showlist.resume()
 
     def on_recorder_button(self, button_text):
         """To avoid multiple button handlers, uses button label"""
