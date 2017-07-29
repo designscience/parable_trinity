@@ -1,6 +1,7 @@
 from paraplayer import ParaPlayer
 from multiprocessing import Queue
 import xml.etree.ElementTree as ET  # XML support
+import time
 
 
 class ShowListEvent(object):
@@ -32,7 +33,6 @@ class ShowList(object):
         self.start_time = 0.0
         self.paused_at = 0.0
         self.locked = False  # Don't allow the show to be paused or stopped
-        self.show_paused = False  # this means that a stop event was encountered
 
         self.player.set_start_callback(self.on_start)
         self.player.set_finish_callback(self.on_completion)
@@ -81,6 +81,18 @@ class ShowList(object):
         self.paused_at = 0.0
         self.start_time = 0.0
 
+    def pause(self):
+        """Stops playback and resets player"""
+        if self.paused_at == 0.0:
+            self.seq_queue.put('stop')
+            self.player.pause()
+            self.paused_at = time.time() - self.start_time
+        else:
+            self.seq_queue.put('resume')
+            self.player.play()
+            self.start_time = time.time() - self.paused_at
+            self.paused_at = 0.0
+
     def current_event(self):
         """Returns the current event (whether playing or queued)"""
         if 0 <= self.current_index < len(self.events):
@@ -103,7 +115,7 @@ class ShowList(object):
         if ev is not None:
             if ev.type == 'stop':
                 # no playback initiated so we'll wait until start() is called again
-                self.show_paused = True
+                self.paused_at = time.time() - self.start_time
                 self.current_index += 1
                 print("Show playback intentionally stopped, press PLAY to resume")
             else:
@@ -117,7 +129,7 @@ class ShowList(object):
 
     def play_next(self):
         """Plays the next event if one exists"""
-        self.show_paused = False
+        self.paused_at = 0.0  # un-pause TODO: add adjusting time entry here for paused "paused" entries
         self.current_index += 1
         if self.current_index < len(self.events):
             self.play()
@@ -131,7 +143,7 @@ class ShowList(object):
             print("On Completion called with time signature " + str(time_sig) + " for media " + media_path)
         else:
             print("On Completion called after pause at " + str(time_sig))
-        if not self.show_paused:
+        if not self.show_paused():
             self.play_next()
 
     def on_start(self, media_path, time_sig):
@@ -144,3 +156,6 @@ class ShowList(object):
             print("On Start called with time signature " + str(time_sig) + " for media " + media_path)
         else:
             print("On Start called after pause at " + str(time_sig))
+
+    def show_paused(self):
+        return self.paused_at > 0.0

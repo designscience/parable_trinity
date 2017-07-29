@@ -126,6 +126,7 @@ class ParaPlayer(threading.Thread):
     def rewind(self):
         """Set the player to the start of the media or to the start of the loop"""
         self.player.set_time(int(self.loop_start * 1000))  # loop start should be 0.0 if we're not looping
+        self.player.stop()
 
     def get_time(self):
         """Returns the current time of playback"""

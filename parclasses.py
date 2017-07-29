@@ -1452,7 +1452,8 @@ class ValvePort_Recorder(ValvePort):
             final = ControlList()
             for layer in self.layers:
                 final.overlay(layer)
-            final.sortEvents()
+            # final.sort()
+            final.reconcile()
             final.saveXML('./recordings/{}.temp.seqx'.format(self.media_file))
         self._init_layers()
 
@@ -1476,7 +1477,7 @@ class ValvePort_Recorder(ValvePort):
         current_layer = None
         if self.recording_start > 0.0:  # only if we are recording
             for i in range(0, self.num_channels):
-                if self.execstate[i] != self.channels[i]:
+                if (self.execstate[i] == 0) != (self.channels[i] == 0):
                     if now is None:
                         now = self.current_time_in_frames()
                         self.layer_recorded = True  # dirty flag for this layer

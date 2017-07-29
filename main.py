@@ -47,7 +47,7 @@ class TrinityApp(App):
         self.sequences = [""] * self.num_buttons  # Sequence name
         self.trigger_times = [0.0] * self.num_buttons  # Sequence name
         # self.remote_addr = '192.168.1.115'
-        self.remote_addr = '192.32.12.3'
+        self.remote_addr = '192.32.12.2'
         self.seq_directory = "/Users/Stu/Documents/Compression/Sequences/"
         # self.show_seq_directory = "/Users/Stu/Documents/Compression/Sequences/Show/"
         self.music_directory = "/Users/Stu/Documents/Compression/Music/"
@@ -178,9 +178,9 @@ class TrinityApp(App):
         self.vp3.setMap(self.straight_map)
 
         # add output objects to an output bank
+        self.vpb.addPort(self.vp3)
         self.vpb.addPort(self.vp1)
         self.vpb.addPort(self.vp2)
-        self.vpb.addPort(self.vp3)
         self.vpb.execute()   # show the lights
 
         # Create initial temp sequence
@@ -237,25 +237,25 @@ class TrinityApp(App):
 
     def loop_handler(self, dt=None):
         """Once this is called it will run each frame"""
-        lock = threading.Lock()
+        # lock = threading.Lock()
         if not self.in_handler:
             self.in_handler = True
             while self.ev_queue.empty() is False:
-                lock.acquire()
+                # lock.acquire()
                 ev = self.ev_queue.get()
                 self.vpb.setEventExec(ev)
-                lock.release()
+                # lock.release()
 
             while self.temp_ev_queue.empty() is False:
-                lock.acquire()
+                # lock.acquire()
                 ev = self.temp_ev_queue.get()
                 self.vpb.setEventExec(ev)
-                lock.release()
+                # lock.release()
 
             while self.in_queue.empty() is False:
-                lock.acquire()
+                # lock.acquire()
                 self.process_thread_command(self.in_queue.get())
-                lock.release()
+                # lock.release()
 
             self.in_handler = False
         Clock.schedule_once(self.loop_handler, 0)  # call this on next frame
@@ -290,9 +290,9 @@ class TrinityApp(App):
         # clearbank - hide sequence buttons
         elif cmd[0] == "clearbank":
             for button in self.sequences:
-                self.home_screen.ids.sequence_panel.remove_widget(button)
                 self.sequences.remove(button)
                 del button
+            self.home_screen.ids.sequence_panel.clear_widgets()
             self.sequences = []
             self.sequence_index = 0  # TODO: is sequence_index still needed
         # newseq - add a new sequence
@@ -356,7 +356,7 @@ class TrinityApp(App):
         self.out_queue.put("tap|" + str(time.time()))
         if self.home_screen.ids.use_beat.state == 'normal':
             self.home_screen.ids.use_beat.state = 'down'
-            # self.out_queue.put("usebeat|yes")
+            self.out_queue.put("usebeat|yes")
 
     def on_kill_press(self):
         """terminate sequences with extreme prejudice"""
@@ -388,11 +388,15 @@ class TrinityApp(App):
                 # Read the tempo from a file
                 tempofn = "" + self.seq_directory + bank_name + "/tempo.txt"
                 self.title = "{} not found".format(tempofn)
-                with open(tempofn, "r") as tempofile:
-                    if tempofile is not None:
-                        tempo = tempofile.readline()
-                        self.title = tempo
-                        self.out_queue.put("settempo|" + tempo)
+                try:
+                    with open(tempofn, "r") as tempofile:
+                        if tempofile is not None:
+                            tempo = tempofile.readline()
+                            self.title = tempo
+                            self.out_queue.put("settempo|" + tempo)
+                            self.out_queue.put("usebeat|yes")
+                except FileNotFoundError:
+                    self.title = 'tempo.txt not found'
             else:
                 self.temp_out_queue.put("stop")
                 print("Sequence was running. Please try again")
@@ -458,6 +462,9 @@ class TrinityApp(App):
                     self.showlist.start()
                 else:
                     self.showlist.stop()
+        elif button_text == 'pause':
+            if self.showlist:
+                self.showlist.stop()
         elif button_text == 'next':
             if self.showlist:
                 self.showlist.play_next()
