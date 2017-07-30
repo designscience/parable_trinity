@@ -23,6 +23,10 @@ instead of basis being frames with float seconds a by-product.  7/26/2012
 
 Version 3.0 - Python 3 & Trinity 7/2017
 
+NEW FEATURE: you can add a header value for offset in a seqx file and that number of frames will be added to the
+entire sequence.
+entire sequence.
+
 ***************************************************** """
 
 # from __future__ import division
@@ -1003,6 +1007,7 @@ class ControlList(object):
         self.ref_first_beat.setTime(float(root.get("ref_first_beat")))
         self.beat_period.setTime(float(root.get("beat_period")))
         self.first_beat.setTime(float(root.get("first_beat")))
+        self.offset = int(root.get("offset", 0))
 
         # get events
         del self.events[:]  # clear any exiting events
@@ -1013,7 +1018,10 @@ class ControlList(object):
             ev_list = events.findall("event")
             for ev in ev_list:
                 self.events.append(ControlEvent(ev))
-        
+
+        if self.offset != 0:
+            self.addOffsetFrames(self.offset)
+
 
 # ***************** ValvePort *****************************
 
