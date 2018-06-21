@@ -22,7 +22,7 @@ from kivy.uix.togglebutton import ToggleButton
 
 os.environ['KIVY_IMAGE'] = 'pil,sdl2'
 kivy.require('1.10.0')
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 MRL = '/Users/Stu/Documents/Compression/Keith/Keith Emerson Tribute rev1.mp3'
 
