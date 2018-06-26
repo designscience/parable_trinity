@@ -25,7 +25,6 @@ Version 3.0 - Python 3 & Trinity 7/2017
 
 NEW FEATURE: you can add a header value for offset in a seqx file and that number of frames will be added to the
 entire sequence.
-entire sequence.
 
 ***************************************************** """
 

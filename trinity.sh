@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
-source ~/Environments/Trinity/bin/activate
-python main.py
+source ~/Environments/Trinity2/bin/activate
+python main.py --size=1400x900
 deactivate

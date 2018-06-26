@@ -145,7 +145,7 @@ class ParaPlayer(threading.Thread):
 
     def loop(self, start, end, pause=False, loop_callback_fn=None):
         """Plays the player in a loop, optionally pausing at the end of the loop, optionally calling a callback when
-        the end is reaced."""
+        the end is reached."""
         self.stop()
         self.pause_on_loop = pause
         self.loop_callback = loop_callback_fn

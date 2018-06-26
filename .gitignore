@@ -97,8 +97,9 @@ ENV/
 
 .idea
 ~assets
+~unused
 ENV3
 parable3
 recordings
 parablew.pyw
-parthreads2015.py
+~unused/parthreads2015.py

@@ -76,7 +76,7 @@ class ShowList(object):
 
     def stop(self):
         """Stops playback and resets player"""
-        self.seq_queue.put('stop')
+        self.seq_queue.put('stop|')
         self.player.stop()
         self.paused_at = 0.0
         self.start_time = 0.0
@@ -84,11 +84,11 @@ class ShowList(object):
     def pause(self):
         """Stops playback and resets player"""
         if self.paused_at == 0.0:
-            self.seq_queue.put('stop')
+            self.seq_queue.put('stop|')
             self.player.pause()
             self.paused_at = time.time() - self.start_time
         else:
-            self.seq_queue.put('resume')
+            self.seq_queue.put('resume|')
             self.player.play()
             self.start_time = time.time() - self.paused_at
             self.paused_at = 0.0
