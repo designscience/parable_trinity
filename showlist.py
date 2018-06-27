@@ -142,6 +142,17 @@ class ShowList(object):
             # end of show
             self.locked = False
 
+    def play_prev(self):
+        """Plays the previous event if one exists"""
+        self.paused_at = 0.0  # un-pause TODO: add adjusting time entry here for paused "paused" entries
+        self.current_index -= 1
+        if self.current_index >= 0:
+            self.play()
+        else:
+            # start of show
+            self.current_index = 0
+            self.locked = False
+
     def on_completion(self, media_path, time_sig):
         # TODO: need to determine if the sequence is longer than the music. Rare, but possible.
         if media_path:
