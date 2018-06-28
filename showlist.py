@@ -34,6 +34,8 @@ class ShowList(object):
         self.paused_at = 0.0
         self.locked = False  # Don't allow the show to be paused or stopped
 
+        self.is_stopped = True  # prevent callbacks from playing the next track
+
         self.player.set_start_callback(self.on_start)
         self.player.set_finish_callback(self.on_completion)
 
@@ -71,11 +73,13 @@ class ShowList(object):
 
     def cancel(self):
         """Cancels playback of this show and resets event index"""
+        self.is_stopped = True
         self.stop()
         self.current_index = 0
 
     def stop(self):
         """Stops playback and resets player"""
+        self.is_stopped = True
         self.seq_queue.put('stop|')
         self.player.stop()
         self.paused_at = 0.0
@@ -84,10 +88,12 @@ class ShowList(object):
     def pause(self):
         """Stops playback and resets player"""
         if self.paused_at == 0.0:
+            self.is_stopped = True
             self.seq_queue.put('stop|')
             self.player.pause()
             self.paused_at = time.time() - self.start_time
         else:
+            self.is_stopped = False
             self.seq_queue.put('resume|')
             self.player.play()
             self.start_time = time.time() - self.paused_at
@@ -105,6 +111,7 @@ class ShowList(object):
         # CRITICAL: MUST reinstantiate the thread here
         # self.stop()
         if not self.locked:
+            self.is_stopped = False
             self.locked = True
             self.current_index = 0
             self.play()
@@ -113,6 +120,8 @@ class ShowList(object):
         """Starts playing the show"""
         ev = self.current_event()
         if ev is not None:
+            self.is_stopped = False
+
             if ev.type == 'stop':
                 # no playback initiated so we'll wait until start() is called again
                 self.paused_at = time.time() - self.start_time
@@ -126,6 +135,8 @@ class ShowList(object):
     def resume(self):
         """Plays the next event if one exists"""
         self.paused_at = 0.0  # un-pause TODO: add adjusting time entry here for paused "paused" entries
+        self.is_stopped = False
+
         if self.current_index < len(self.events):
             self.play()
         else:
@@ -135,11 +146,50 @@ class ShowList(object):
     def play_next(self):
         """Plays the next event if one exists"""
         self.paused_at = 0.0  # un-pause TODO: add adjusting time entry here for paused "paused" entries
+        self.is_stopped = False
+
         self.current_index += 1
         if self.current_index < len(self.events):
             self.play()
         else:
             # end of show
+            self.locked = False
+
+    def queue_next(self):
+        """ Points to the next event if one exists"""
+        self.paused_at = 0.0  # un-pause TODO: add adjusting time entry here for paused "paused" entries
+        self.is_stopped = True
+        if not self.is_stopped:
+            self.stop()
+
+        self.current_index += 1
+        if self.current_index >= len(self.events):
+            self.current_index = len(self.events) - 1
+            self.locked = False
+
+    def play_prev(self):
+        """Plays the previous event if one exists"""
+        self.paused_at = 0.0  # un-pause TODO: add adjusting time entry here for paused "paused" entries
+        self.is_stopped = False
+
+        self.current_index -= 1
+        if self.current_index >= 0:
+            self.play()
+        else:
+            # start of show
+            self.current_index = 0
+            self.locked = False
+
+    def queue_prev(self):
+        """ Points to the previous event if one exists"""
+        self.paused_at = 0.0  # un-pause TODO: add adjusting time entry here for paused "paused" entries
+        self.is_stopped = True
+        if not self.is_stopped:
+            self.stop()
+
+        self.current_index -= 1
+        if self.current_index < 0:
+            self.current_index = 0
             self.locked = False
 
     def on_completion(self, media_path, time_sig):
@@ -163,4 +213,4 @@ class ShowList(object):
             print("On Start called after pause at " + str(time_sig))
 
     def show_paused(self):
-        return self.paused_at > 0.0
+        return self.paused_at > 0.0 or self.is_stopped

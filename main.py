@@ -26,7 +26,6 @@ __version__ = "3.1.0"
 
 MRL = '/Users/Stu/Documents/Compression/Keith/Keith Emerson Tribute rev1.mp3'
 
-
 class TrinityApp(App):
     def __init__(self):
         App.__init__(self)
@@ -48,7 +47,7 @@ class TrinityApp(App):
         self.sequences = [""] * self.num_buttons  # Sequence name
         self.trigger_times = [0.0] * self.num_buttons  # Sequence name
         # self.remote_addr = '192.168.1.115'
-        self.remote_addr = '192.32.12.2'
+        self.remote_addr = '192.32.12.3'
         self.seq_directory = "/Users/Stu/Documents/Compression/Sequences/"
         # self.show_seq_directory = "/Users/Stu/Documents/Compression/Sequences/Show/"
         self.music_directory = "/Users/Stu/Documents/Compression/Music/"
@@ -238,25 +237,25 @@ class TrinityApp(App):
 
     def loop_handler(self, dt=None):
         """Once this is called it will run each frame"""
-        # lock = threading.Lock()
+        lock = threading.Lock()
         if not self.in_handler:
             self.in_handler = True
             while self.ev_queue.empty() is False:
-                # lock.acquire()
+                lock.acquire()
                 ev = self.ev_queue.get()
                 self.vpb.setEventExec(ev)
-                # lock.release()
+                lock.release()
 
             while self.temp_ev_queue.empty() is False:
-                # lock.acquire()
+                lock.acquire()
                 ev = self.temp_ev_queue.get()
                 self.vpb.setEventExec(ev)
-                # lock.release()
+                lock.release()
 
             while self.in_queue.empty() is False:
-                # lock.acquire()
+                lock.acquire()
                 self.process_thread_command(self.in_queue.get())
-                # lock.release()
+                lock.release()
 
             self.in_handler = False
         Clock.schedule_once(self.loop_handler, 0)  # call this on next frame
@@ -456,15 +455,21 @@ class TrinityApp(App):
     def on_show_control_button(self, button_text, button_state='normal'):
         """Handle show playback button clicks"""
         if button_text == 'prev':
-            pass
+            if self.showlist:
+                self.showlist.queue_prev()
+        if button_text == 'next':
+            if self.showlist:
+                self.showlist.queue_next()
         elif button_text == 'PLAY':
             if self.showlist:
                 if button_state == 'down':
                     self.showlist.start()
                 else:
-                    self.showlist.stop()
+                    self.out_queue.put("stop|")
+                    self.showlist.pause()
         elif button_text == 'pause':
             if self.showlist:
+                self.out_queue.put("stop|")
                 self.showlist.pause()
         elif button_text == 'resume':
             if self.showlist:
