@@ -76,8 +76,12 @@
                 text: 'pause'
                 on_press: root.app.on_show_control_button(self.text)
             Button:
-                id: next_button
+                id: resume_button
                 text: 'resume'
+                on_press: root.app.on_show_control_button(self.text)
+            Button:
+                id: next_button
+                text: 'next'
                 on_press: root.app.on_show_control_button(self.text)
             BoxLayout:
                 id: recorder_panel

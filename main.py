@@ -47,7 +47,7 @@ class TrinityApp(App):
         self.sequences = [""] * self.num_buttons  # Sequence name
         self.trigger_times = [0.0] * self.num_buttons  # Sequence name
         # self.remote_addr = '192.168.1.115'
-        self.remote_addr = '192.32.12.2'
+        self.remote_addr = '192.32.12.3'
         self.seq_directory = "/Users/Stu/Documents/Compression/Sequences/"
         # self.show_seq_directory = "/Users/Stu/Documents/Compression/Sequences/Show/"
         self.music_directory = "/Users/Stu/Documents/Compression/Music/"
@@ -456,20 +456,21 @@ class TrinityApp(App):
         """Handle show playback button clicks"""
         if button_text == 'prev':
             if self.showlist:
-                self.showlist.play_prev()
+                self.showlist.queue_prev()
+        if button_text == 'next':
+            if self.showlist:
+                self.showlist.queue_next()
         elif button_text == 'PLAY':
             if self.showlist:
                 if button_state == 'down':
                     self.showlist.start()
                 else:
-                    self.showlist.stop()
+                    self.out_queue.put("stop|")
+                    self.showlist.pause()
         elif button_text == 'pause':
-            # if self.showlist:
-            #     self.showlist.pause()
-            if self.player.player.is_playing():
-                self.player.player.pause()
-            else:
-                self.player.player.play()
+            if self.showlist:
+                self.out_queue.put("stop|")
+                self.showlist.pause()
         elif button_text == 'resume':
             if self.showlist:
                 self.showlist.resume()
