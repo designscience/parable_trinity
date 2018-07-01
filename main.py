@@ -47,7 +47,7 @@ class TrinityApp(App):
         self.sequences = [""] * self.num_buttons  # Sequence name
         self.trigger_times = [0.0] * self.num_buttons  # Sequence name
         # self.remote_addr = '192.168.1.115'
-        self.remote_addr = '192.32.12.3'
+        self.remote_addr = '192.32.12.2'
         self.seq_directory = "/Users/Stu/Documents/Compression/Sequences/"
         # self.show_seq_directory = "/Users/Stu/Documents/Compression/Sequences/Show/"
         self.music_directory = "/Users/Stu/Documents/Compression/Music/"
@@ -146,6 +146,7 @@ class TrinityApp(App):
 
         # Show list is used to play back music and sequences together
         self.showlist = showlist.ShowList(self.player, self.out_queue, self.show_list_file)
+        self.showlist.set_callbacks(self.on_showlist_change_state, self.on_showlist_track_change)
         self.show_events = []
 
         self.in_handler = False  # prevent too much recursion into loop handler
@@ -456,17 +457,17 @@ class TrinityApp(App):
         """Handle show playback button clicks"""
         if button_text == 'prev':
             if self.showlist:
-                self.showlist.queue_prev()
+                self.showlist.play_prev()
         if button_text == 'next':
             if self.showlist:
-                self.showlist.queue_next()
+                self.showlist.play_next()
         elif button_text == 'PLAY':
             if self.showlist:
-                if button_state == 'down':
-                    self.showlist.start()
+                if self.showlist.is_stopped:
+                    self.showlist.play()
                 else:
                     self.out_queue.put("stop|")
-                    self.showlist.pause()
+                    self.showlist.stop()
         elif button_text == 'pause':
             if self.showlist:
                 self.out_queue.put("stop|")
@@ -481,6 +482,7 @@ class TrinityApp(App):
             self.vp3.record()
         elif button_text == 'accept':
             self.vp3.accept()
+            self.vp3.accept()
         elif button_text == 'discard':
             self.vp3.reject()
         elif button_text == 'commit':
@@ -488,6 +490,27 @@ class TrinityApp(App):
             self.vp3.commit()
             self.home_screen.hide_recorder_controls()
 
+    def on_showlist_change_state(self, is_stopped=None):
+        """ When ShowList changes state from play to pause / stop changes play button """
+        if is_stopped is None:
+            is_stopped = self.showlist.is_stopped
+        self.home_screen.ids.play_button.state = 'normal' if is_stopped else 'down'
+
+    def on_showlist_pause_state(self, is_paused=None):
+        """ When ShowList changes paused to un-paused changes state of pause button """
+        if is_paused is None:
+            is_paused = self.showlist.is_paused
+        self.home_screen.ids.pause_button.state = 'down' if is_paused else 'normal'
+
+    def on_showlist_track_change(self, track_index):
+        """ When ShowList changes state from play to pause / stop changes play button """
+        index = 0
+        for event in self.show_events:
+            if index == track_index:
+                event.set_active()
+            else:
+                event.clear_active()
+            index += 1
 
     # ~~~~~~~~~~~~~~~~~ these functions are written for the pyplayer class ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

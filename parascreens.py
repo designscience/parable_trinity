@@ -121,7 +121,9 @@ class ShowListItem(BoxLayout):
             self.ids.btn_record.opacity = 0.0
 
     def set_active(self):
-        pass
+        self.ids.media_file.color = [.42, .84, 1, 1]
+        self.canvas.ask_update()
 
     def clear_active(self):
-        pass
+        self.ids.media_file.color = [1, 1, 1, 1]
+        self.canvas.ask_update()

@@ -35,12 +35,23 @@ class ShowList(object):
         self.locked = False  # Don't allow the show to be paused or stopped
 
         self.is_stopped = True  # prevent callbacks from playing the next track
+        self.is_paused = False  # for display use only (callback)
 
         self.player.set_start_callback(self.on_start)
         self.player.set_finish_callback(self.on_completion)
 
+        self.change_state_callback = None
+        self.pause_state_callback = None
+        self.change_track_callback = None
+
         if show_file_path is not None:
             self.load(show_file_path)
+
+    def set_callbacks(self, change_state_callback=None, change_track_callback=None, pause_state_callback=None):
+        """ Sets external callbacks to be run when the state changes or the track changes """
+        self.change_state_callback = change_state_callback
+        self.pause_state_callback = pause_state_callback
+        self.change_track_callback = change_track_callback
 
     def load(self, show_file_path):
         # Load show file
@@ -74,30 +85,42 @@ class ShowList(object):
     def cancel(self):
         """Cancels playback of this show and resets event index"""
         self.is_stopped = True
+        self.is_paused = False
+        self.call_change_state()
         self.stop()
         self.current_index = 0
+        self.call_track_change()
 
     def stop(self):
         """Stops playback and resets player"""
         self.is_stopped = True
+        self.call_change_state()
         self.seq_queue.put('stop|')
         self.player.stop()
         self.paused_at = 0.0
+        self.is_paused = False
+        self.call_pause_state()
         self.start_time = 0.0
 
     def pause(self):
         """Stops playback and resets player"""
         if self.paused_at == 0.0:
             self.is_stopped = True
+            self.call_change_state()
             self.seq_queue.put('stop|')
             self.player.pause()
             self.paused_at = time.time() - self.start_time
+            self.is_paused = True
+            self.call_pause_state()
         else:
             self.is_stopped = False
+            self.call_change_state()
             self.seq_queue.put('resume|')
             self.player.play()
             self.start_time = time.time() - self.paused_at
             self.paused_at = 0.0
+            self.is_paused = False
+            self.call_pause_state()
 
     def current_event(self):
         """Returns the current event (whether playing or queued)"""
@@ -114,51 +137,74 @@ class ShowList(object):
             self.is_stopped = False
             self.locked = True
             self.current_index = 0
+            self.call_track_change()
             self.play()
+            self.call_change_state()
+            self.is_paused = False
+            self.call_pause_state()
+            self.call_track_change()
 
     def play(self):
         """Starts playing the show"""
         ev = self.current_event()
         if ev is not None:
-            self.is_stopped = False
-
             if ev.type == 'stop':
                 # no playback initiated so we'll wait until start() is called again
                 self.paused_at = time.time() - self.start_time
                 self.current_index += 1
+                self.is_stopped = True
+                self.call_track_change()
+                self.call_pause_state()
                 print("Show playback intentionally stopped, press PLAY to resume")
             else:
                 media_path = self.music_root + ev.source if ev.source != '' else None
                 self.player.set_media(media_path, ev.duration)
                 self.player.play()
+                self.is_stopped = False
+                self.is_paused = False
+                self.call_pause_state()
+            self.call_change_state()
+            self.call_track_change()
 
     def resume(self):
         """Plays the next event if one exists"""
         self.paused_at = 0.0  # un-pause TODO: add adjusting time entry here for paused "paused" entries
         self.is_stopped = False
+        self.call_change_state()
 
         if self.current_index < len(self.events):
+            self.call_track_change()
             self.play()
         else:
             # end of show
             self.locked = False
+        self.is_paused = False
+        self.call_pause_state()
 
     def play_next(self):
         """Plays the next event if one exists"""
+        was_playing = not self.is_stopped
         self.paused_at = 0.0  # un-pause TODO: add adjusting time entry here for paused "paused" entries
-        self.is_stopped = False
+        if not self.is_stopped:
+            self.stop()
+            self.call_change_state()
 
         self.current_index += 1
         if self.current_index < len(self.events):
-            self.play()
+            if was_playing:
+                self.play()
+                self.call_change_state()
         else:
             # end of show
             self.locked = False
+            self.call_change_state()
+        self.is_paused = False
+        self.call_pause_state()
+        self.call_track_change()
 
     def queue_next(self):
         """ Points to the next event if one exists"""
         self.paused_at = 0.0  # un-pause TODO: add adjusting time entry here for paused "paused" entries
-        self.is_stopped = True
         if not self.is_stopped:
             self.stop()
 
@@ -166,31 +212,46 @@ class ShowList(object):
         if self.current_index >= len(self.events):
             self.current_index = len(self.events) - 1
             self.locked = False
+        self.call_track_change()
+        self.is_paused = False
+        self.call_pause_state()
 
     def play_prev(self):
         """Plays the previous event if one exists"""
+        was_playing = not self.is_stopped
         self.paused_at = 0.0  # un-pause TODO: add adjusting time entry here for paused "paused" entries
-        self.is_stopped = False
+        if not self.is_stopped:
+            self.stop()
+            self.call_change_state()
 
         self.current_index -= 1
         if self.current_index >= 0:
-            self.play()
+            if was_playing:
+                self.play()
+                self.call_change_state()
         else:
             # start of show
             self.current_index = 0
             self.locked = False
+            self.call_change_state()
+        self.call_track_change()
+        self.is_paused = False
+        self.call_pause_state()
 
     def queue_prev(self):
         """ Points to the previous event if one exists"""
         self.paused_at = 0.0  # un-pause TODO: add adjusting time entry here for paused "paused" entries
-        self.is_stopped = True
         if not self.is_stopped:
             self.stop()
+            self.call_change_state()
 
         self.current_index -= 1
         if self.current_index < 0:
             self.current_index = 0
             self.locked = False
+        self.call_track_change()
+        self.is_paused = False
+        self.call_pause_state()
 
     def on_completion(self, media_path, time_sig):
         # TODO: need to determine if the sequence is longer than the music. Rare, but possible.
@@ -214,3 +275,18 @@ class ShowList(object):
 
     def show_paused(self):
         return self.paused_at > 0.0 or self.is_stopped
+
+    def call_change_state(self):
+        """ Calls external callback if set """
+        if self.change_state_callback is not None:
+            self.change_state_callback(self.is_stopped)
+
+    def call_track_change(self):
+        """ Calls external callback if set """
+        if self.change_track_callback is not None:
+            self.change_track_callback(self.current_index)
+
+    def call_pause_state(self):
+        """ Calls external pause state change handler """
+        if self.pause_state_callback is not None:
+            self.pause_state_callback(self.is_paused)
